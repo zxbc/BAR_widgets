@@ -29,7 +29,7 @@ local alpha = 0.06
 
 -- Vars
 local WEAPON_RANGE_TYPES = {"Ground", "Air", "Submerged"}  -- Types of weapon ranges to display
-local selChanged = false
+local selChanged = true
 local selectedUnits = {}
 local weaponRanges = {}
 
@@ -122,7 +122,6 @@ function widget:DrawWorldPreUnit()
 
     gl.DepthTest(false)
     gl.Culling(GL.BACK)
-    gl.Texture(0, "$heightmap")
 
     local camX, camY, camZ = Spring.GetCameraPosition()
     for i, weaponRange in ipairs(weaponRanges) do
@@ -137,7 +136,7 @@ function widget:DrawWorldPreUnit()
             gl.PushMatrix()
             gl.Translate(x, y, z)
       
-            c = 5 / #weaponRanges * range / 1000    -- some reduction to saturation based on range and num units selected
+            c = 5 * range / 500 / #weaponRanges    -- some reduction to saturation based on range and num units selected
             c = c > 1 and 1 or c
             if colorMode == 0 then
                 gl.Color(c, c, c, alpha)
@@ -161,7 +160,6 @@ function widget:DrawWorldPreUnit()
             gl.PopMatrix()
         end
     end
-    gl.Texture(0, false)
     gl.DepthTest(true)
 end
 
