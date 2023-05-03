@@ -1,10 +1,10 @@
 function widget:GetInfo()
     return {
         name      = "Selected Units Weapon Range",
-        desc      = "Displays the range of selected units' weapons. Press \\ key to toggle on/off, press ] key to cycle through colors",
+        desc      = "Displays range circles of selected units' weapons at all time. Press \\ key to toggle on/off; press ] key to cycle through colors; press [ key to cycle through display modes.",
         author    = "Errrrrrr",
         date      = "May 2023",
-        version   = "1.0",
+        version   = "1.1",
         license   = "GNU GPL, v2 or later",
         layer     = 0,
         enabled   = true,
@@ -12,23 +12,21 @@ function widget:GetInfo()
     }
 end
 
----------------------------------------------------------------------------------
--- Version 1.0:
+-----------------------------------------------------------------------------------------
+-- Version 1.1:
 -- Only displays the range of the first weapon of a unit for now
 -- Press '\' key to toggle on and off range display of selected units (default on)
--- Press ']' key to cycle between white, red, green, and blue color modes
--- maxDrawDistance default at 5000
--- maxNumRanges default at 50 (lonest 50 ranges will be displayed if selected more)
--- Alpha default at 0.06 (remember circles overlap and become denser!)
----------------------------------------------------------------------------------
+-- Press ']' key to cycle between white, red, green, and blue color modes (default white)
+-- Press '[' key to cycle between filled, empty and combined modes (default filled)
+-----------------------------------------------------------------------------------------
 
-local maxDrawDistance = 5000    -- Max camera distance at which to draw ranges of selected units
-local maxNumRanges = 50         -- Max number of ranges to display. Too high a value can cause fps drop!
-                                -- If you select more than this number of units, only this many will be drawn, sorted by longest ranges
-local alpha = 0.06
+local maxDrawDistance = 5000    -- Max camera distance at which to draw ranges of selected units (default 5000)
+local maxNumRanges = 50         -- Max number of ranges to display (default 50)
+                                -- If you select more than this number of units, only this many will be drawn, starting from highest ranges
+local alpha = 0.08              -- Alpha value for the drawing (default at 0.08)
+                                -- Remember circles overlap and become denser in color!
 
 -- Vars
-local WEAPON_RANGE_TYPES = {"Ground", "Air", "Submerged"}  -- Types of weapon ranges to display
 local selChanged = true
 local selectedUnits = {}
 local weaponRanges = {}
@@ -36,6 +34,7 @@ local weaponRanges = {}
 local toggle = true
 local colorMode = 0
 local colorModeNames = { "white", "red", "green", "blue" }
+local displayMode = 0
 
 -- Initialize the widget
 function widget:Initialize()
@@ -65,12 +64,20 @@ function cycleColorMode()
     Spring.Echo("Weapon range color switched to: " .. colorModeNames[colorMode+1])
 end
 
+function cycleDisplayMode()
+    displayMode = (displayMode + 1) % 3
+    Spring.Echo("Weapon range display mode switched to: " .. displayMode)
+end
+
 function widget:KeyPress(key, mods, isRepeat)
     if key == 92 then -- 92 is forward slash '\'
         toggleRange()
     end
     if key == 93 then -- 93 is right bracket ']'
         cycleColorMode()
+    end
+    if key == 91 then -- 92 is left bracket '['
+        cycleDisplayMode()
     end
 end
 
@@ -95,18 +102,6 @@ function widget:Update(dt)
         end
     end
 end
-
---[[ function drawCircle(uID, coverageRange, x, y, z, camX, camY, camZ)
-	local lineOpacityMultiplier = transparency * 2
-
-	if lineOpacityMultiplier > 0 then
-        local circleColor = {1, 1, 0, 0.5}
-
-		glColor(circleColor[1],circleColor[2],circleColor[3], lineOpacityMultiplier)
-		glLineWidth(1)
-		glDrawGroundCircle(x, y, z, coverageRange, 128)
-	end
-end ]]
 
 -- Draw stuff
 function widget:DrawWorldPreUnit()
@@ -134,29 +129,43 @@ function widget:DrawWorldPreUnit()
 
         if dist < maxDrawDistance then
             gl.PushMatrix()
-            gl.Translate(x, y, z)
-      
-            c = 5 * range / 500 / #weaponRanges    -- some reduction to saturation based on range and num units selected
+            gl.Blending ("alpha")
+
+            c = range / 500     -- some reduction to saturation based on range and num units selected
             c = c > 1 and 1 or c
+            local cColor = {1, 1, 1, 0.5}
             if colorMode == 0 then
-                gl.Color(c, c, c, alpha)
+                cColor = {c, c, c, alpha}
             elseif colorMode == 1 then
-                gl.Color(c, 0, 0, alpha)
+                cColor = {c, 0, 0, alpha}
             elseif colorMode == 2 then
-                gl.Color(0, c, 0, alpha)
+                cColor = {0, c, 0, alpha}
             elseif colorMode == 3 then
-                gl.Color(0, 0, c, alpha)
+                cColor = {0, 0, c, alpha}
             end
 
-            gl.BeginEnd(GL.TRIANGLE_FAN, function()
-              local numSegments = 32
-              local angleStep = (2 * math.pi) / numSegments
-              for i = 0, numSegments do
-                local angle = i * angleStep
-                gl.Vertex(math.sin(angle) * range, 0, math.cos(angle) * range)
-              end
-            end)
+            -- display modes: 0 - filled circles, 1 - empty circles, 2 - combined
+            -- draw empty circle
+            if displayMode ~= 0 then
+                gl.Color(cColor[1], cColor[2], cColor[3], cColor[4] * 1.2)
+                gl.LineWidth(5)
+                gl.DrawGroundCircle(x, y, z, range, 32)
+            end
 
+            -- draw filled circle
+            if displayMode ~= 1 then
+                gl.Translate(x, y, z)
+                gl.Color(cColor[1], cColor[2], cColor[3], cColor[4])
+                gl.BeginEnd(GL.TRIANGLE_FAN, function()
+                local numSegments = 32
+                local angleStep = (2 * math.pi) / numSegments
+                for i = 0, numSegments do
+                    local angle = i * angleStep
+                    gl.Vertex(math.sin(angle) * range, 0, math.cos(angle) * range)
+                end
+                end)
+            end
+            gl.Blending ("reset")
             gl.PopMatrix()
         end
     end
