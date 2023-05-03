@@ -1,9 +1,9 @@
 function widget:GetInfo()
     return {
-        name      = "Weapon Range",
+        name      = "Selected Units Weapon Range",
         desc      = "Displays the range of selected units' weapons. Press \\ key to toggle on/off, press ] key to cycle through colors",
         author    = "Errrrrrr",
-        date      = "2023",
+        date      = "May 2023",
         version   = "1.0",
         license   = "GNU GPL, v2 or later",
         layer     = 0,
@@ -16,7 +16,7 @@ end
 -- Version 1.0:
 -- Only displays the range of the first weapon of a unit for now
 -- Press '\' key to toggle on and off range display of selected units (default on)
--- Press ']' key to cycle between white, red, green, and blue colors
+-- Press ']' key to cycle between white, red, green, and blue color modes
 -- maxDrawDistance default at 5000
 -- maxNumRanges default at 50 (lonest 50 ranges will be displayed if selected more)
 -- Alpha default at 0.06 (remember circles overlap and become denser!)
@@ -33,14 +33,8 @@ local selChanged = false
 local selectedUnits = {}
 local weaponRanges = {}
 
-local glColor					= gl.Color
-local glDepthTest				= gl.DepthTest
-local glLineWidth				= gl.LineWidth
-local glDrawGroundCircle		= gl.DrawGroundCircle
-
-
 local toggle = true
-local colorMode = 0     -- 0 - white default; 1 - red, 2 - green, 3 - blue
+local colorMode = 0
 local colorModeNames = { "white", "red", "green", "blue" }
 
 -- Initialize the widget
@@ -91,7 +85,6 @@ function widget:Update(dt)
     selectedUnits = Spring.GetSelectedUnits()
     --Spring.Echo("units selected: " .. #selectedUnits)
 
-    -- Clear the weapon range data
     weaponRanges = {}
 
     -- Loop through each selected unit and get its weapon ranges
@@ -103,8 +96,7 @@ function widget:Update(dt)
     end
 end
 
--- not used for now
-function drawCircle(uID, coverageRange, x, y, z, camX, camY, camZ)
+--[[ function drawCircle(uID, coverageRange, x, y, z, camX, camY, camZ)
 	local lineOpacityMultiplier = transparency * 2
 
 	if lineOpacityMultiplier > 0 then
@@ -114,7 +106,7 @@ function drawCircle(uID, coverageRange, x, y, z, camX, camY, camZ)
 		glLineWidth(1)
 		glDrawGroundCircle(x, y, z, coverageRange, 128)
 	end
-end
+end ]]
 
 -- Draw stuff
 function widget:DrawWorldPreUnit()
@@ -158,7 +150,6 @@ function widget:DrawWorldPreUnit()
             end
 
             gl.BeginEnd(GL.TRIANGLE_FAN, function()
-              --gl.Vertex(0, 0, 0)
               local numSegments = 32
               local angleStep = (2 * math.pi) / numSegments
               for i = 0, numSegments do
@@ -166,8 +157,6 @@ function widget:DrawWorldPreUnit()
                 gl.Vertex(math.sin(angle) * range, 0, math.cos(angle) * range)
               end
             end)
-      
-
 
             gl.PopMatrix()
         end
