@@ -15,9 +15,9 @@ end
 -----------------------------------------------------------------------------------------
 -- Version 1.1:
 -- Only displays the range of the first weapon of a unit for now
--- Press '\' key to toggle on and off range display of selected units (default on)
--- Press ']' key to cycle between white, red, green, and blue color modes (default white)
--- Press '[' key to cycle between filled, empty and combined modes (default filled)
+-- Press 'm' key to toggle on and off range display of selected units (default on)
+-- Press ',' key to cycle between white, red, green, and blue color modes (default white)
+-- Press '.' key to cycle between filled, empty and combined modes (default filled)
 -----------------------------------------------------------------------------------------
 
 local maxDrawDistance = 5000    -- Max camera distance at which to draw ranges of selected units (default 5000)
@@ -70,13 +70,13 @@ function cycleDisplayMode()
 end
 
 function widget:KeyPress(key, mods, isRepeat)
-    if key == 92 then -- 92 is forward slash '\'
+    if key == 109 then -- 109 is m
         toggleRange()
     end
-    if key == 93 then -- 93 is right bracket ']'
+    if key == 44 then -- 44 is ,
         cycleColorMode()
     end
-    if key == 91 then -- 92 is left bracket '['
+    if key == 46 then -- 46 is .
         cycleDisplayMode()
     end
 end
