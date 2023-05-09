@@ -28,7 +28,7 @@ end
     1. Simply set targetFPS to 30 and normalFPS to 60 or higher, so that your settings will only be turned 
     down when game becomes unplayable
 
-    2. You could set targetFPS to an "acceptable FPS" level such as 100, and normalFPS to +30 at 130, and
+    2. You could set targetFPS to an "acceptable FPS" level such as 60, and normalFPS to +30 at 90, and
     then turn shadow, ssao and bloom to highest settings in the options and let the widget find your ideal
     settings automatically at all times. This might result in frequent adjustments though, so you may want
     to test a few different FPS gaps to see which gives you the best result.
