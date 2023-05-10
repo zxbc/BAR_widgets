@@ -4,7 +4,7 @@ function widget:GetInfo()
        desc = "Automatically dials down graphical settings to increase fps. Dials settings back up when fps is good. Only affects shadow, ssao and bloom for now.",
        author = "Errrrrrr",
        date = "May 8, 2023",
-       version = "1.0",
+       version = "1.1",
        license = "GNU GPL, v2 or later",
        layer = 0,
        enabled = true,
@@ -13,13 +13,16 @@ function widget:GetInfo()
 end
 
 ------------------------------------------------------------------------------------------------------
--- Version 1.0:
+-- Version 1.1:
 --
 -- This widget will monitor your fps and turn down shadow, ssao and bloom settings when fps is low
 -- Only changes "quality" settings, and does not touch other ones such as strength and brightness
 -- Settings will be turned down when fps drops below targetFPS for a while
 -- Settings will be turned back up to normal after fps stays above normalFPS for a while
 -- adjustmentSpeed determines how long it waits when above/below normal/target before changes are made
+--
+-- 1.1: 
+-- You can now set lowestSettings to restrict adjustment from going below these values
 ------------------------------------------------------------------------------------------------------
 
 --[[ 
@@ -32,14 +35,23 @@ end
     then turn shadow, ssao and bloom to highest settings in the options and let the widget find your ideal
     settings automatically at all times. This might result in frequent adjustments though, so you may want
     to test a few different FPS gaps to see which gives you the best result.
+
+    If you run the game at 60fps max, then you may want to set targetFPS to 30 and normalFPS to 50. You can
+    also opt to activate it only at extreme lag by setting targetFPS to a low number like 10 and normalFPS
+    to something like 30.
  ]]
 
 local targetFPS = 60                    -- Below this FPS the settings will start to be turned down
 local normalFPS = targetFPS + 30        -- Above this FPS the settings will be turned back up
                                         -- NOTE: normalFPS should be at least 15-20 FPS above targetFPS to avoid ping pong adjustments
-local adjustmentSpeed = 5       -- The number of updates to wait before adjustment is made both up and down (1 update per second)
+local adjustmentSpeed = 5       -- The number of consecutive seconds to wait before adjustment is made both up and down
 local consoleOutput = true      -- set to false to prevent printout to console when adjustment is made
 
+local lowestSettings = {    -- The lowest settings of each allowed. 0 means to turn it off (only for ssao and bloom)
+        shadow = 2,         -- shadow range is from 1 to 6
+        ssao = 0,           -- ssao range is from 0 to 3
+        bloom = 1           -- bloom range is from 0 to 3
+}
 
 -- local vars
 local slow = 0
@@ -131,6 +143,9 @@ function applySettings()
         curConfig.shadow = 1
         Spring.Echo("shadow nil!")
     end
+    if curConfig.shadow < 1 then
+        curConfig.shadow = 1
+    end
     --Spring.SendCommands("shadows 1 " .. quality[curConfig.shadow])
 	--Spring.SetConfigInt("Shadows", 1)
     Spring.SetConfigInt("ShadowMapSize", quality[curConfig.shadow])
@@ -147,17 +162,18 @@ function adjustGraphics(down)
 
     local result = 0
 
-    if ((curConfig.ssao > 0) and down) or ((curConfig.ssao < savedConfig.ssao) and (not down)) then
+    if ((curConfig.ssao > lowestSettings.ssao) and down) or ((curConfig.ssao < savedConfig.ssao) and (not down)) then
         curConfig.ssao = curConfig.ssao + op
         result = result + 1
     end
 
-    if ((curConfig.bloom > 0) and down) or ((curConfig.bloom < savedConfig.bloom) and (not down)) then
+    if ((curConfig.bloom > lowestSettings.bloom) and down) or ((curConfig.bloom < savedConfig.bloom) and (not down)) then
         curConfig.bloom = curConfig.bloom + op
         result = result + 1
+
     end
 
-    if ((curConfig.shadow > 1) and down) or ((curConfig.shadow < savedConfig.shadow) and (not down)) then
+    if ((curConfig.shadow > lowestSettings.shadow) and down) or ((curConfig.shadow < savedConfig.shadow) and (not down)) then
         curConfig.shadow = curConfig.shadow + op
         result = result + 1
     end
@@ -245,6 +261,11 @@ function widget:KeyPress(key, mods, isRepeat)
 end ]]
 
 function widget:Initialize()
+    -- check these to make sure user didn't put in bad values
+    if lowestSettings.shadow < 1 then lowestSettings.shadow = 1 end
+    if lowestSettings.ssao < 0 then lowestSettings.ssao = 0 end
+    if lowestSettings.bloom < 0 then lowestSettings.bloom = 0 end
+
     loadSettings()
 
 --[[     widgetHandler:RegisterGlobal('KeyPress', function(key, mods, isRepeat)
