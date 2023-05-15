@@ -121,6 +121,7 @@ vec3 CASPass(ivec2 tc) {
 
 	// 	Linear interpolation of outColor using the rescaled sharpness value
 	// 	Turn this on if you want to experiment with sharpness more
+	//  replace ((sharpness - 0.75) / (1.1 - 0.75)) with a value between 0 and 1
 	//outColor = e + ((sharpness - 0.75) / (1.1 - 0.75)) * (outColor - e);
 	return outColor;
 }
