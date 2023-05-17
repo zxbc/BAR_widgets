@@ -15,6 +15,7 @@ end
 -----------------------------------------------------------------------------------------
 -- Version 1.1:
 -- Only displays the range of the first weapon of a unit for now
+-- * ADDED CUSTOM KEYBINDS SUPPORT. Set "custom_keybind_mode" to true to use your own keys
 -- Press 'm' key to toggle on and off range display of selected units (default on)
 -- Press ',' key to cycle between white, red, green, and blue color modes (default white)
 -- Press '.' key to cycle between filled, empty and combined modes (default filled)
@@ -25,7 +26,7 @@ local maxNumRanges = 50         -- Max number of ranges to display (default 50)
                                 -- If you select more than this number of units, only this many will be drawn, starting from highest ranges
 local alpha = 0.07              -- Alpha value for the drawing (default at 0.07)
                                 -- Remember circles overlap and become denser in color!
-local custom_keybind_mode = true  -- set to true if you want to use custom keybinds
+local custom_keybind_mode = false  -- set to true if you want to use custom keybinds
                                   -- set to false to enable default keybinds
 
 -- Vars
