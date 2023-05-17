@@ -23,8 +23,10 @@ end
 local maxDrawDistance = 5000    -- Max camera distance at which to draw ranges of selected units (default 5000)
 local maxNumRanges = 50         -- Max number of ranges to display (default 50)
                                 -- If you select more than this number of units, only this many will be drawn, starting from highest ranges
-local alpha = 0.08              -- Alpha value for the drawing (default at 0.08)
+local alpha = 0.07              -- Alpha value for the drawing (default at 0.07)
                                 -- Remember circles overlap and become denser in color!
+local custom_keybind_mode = true  -- set to true if you want to use custom keybinds
+                                  -- set to false to enable default keybinds
 
 -- Vars
 local selChanged = true
@@ -43,6 +45,9 @@ function widget:Initialize()
     widgetHandler:RegisterGlobal('KeyPress', function(key, mods, isRepeat)
         return self:KeyPress(key, mods, isRepeat)
     end)
+    widgetHandler.actionHandler:AddAction(self, "weapon_range_toggle", toggleRange, nil, "p")
+    widgetHandler.actionHandler:AddAction(self, "weapon_range_cycle_color_mode", cycleColorMode, nil, "p")
+    widgetHandler.actionHandler:AddAction(self, "weapon_range_cycle_display_mode", cycleDisplayMode, nil, "p")
 end
 
 function widget:Shutdown()
@@ -54,30 +59,32 @@ function widget:SelectionChanged(sel)
     selChanged = true
 end
 
-function toggleRange()
+function toggleRange(_, _, args)
     toggle = not toggle
     Spring.Echo("Weapon range toggled on: " .. tostring(toggle))
 end
 
-function cycleColorMode()
+function cycleColorMode(_, _, args)
     colorMode = (colorMode + 1) % 4
     Spring.Echo("Weapon range color switched to: " .. colorModeNames[colorMode+1])
 end
 
-function cycleDisplayMode()
+function cycleDisplayMode(_, _, args)
     displayMode = (displayMode + 1) % 3
     Spring.Echo("Weapon range display mode switched to: " .. displayMode)
 end
 
 function widget:KeyPress(key, mods, isRepeat)
-    if key == 109 then -- 109 is m
-        toggleRange()
-    end
-    if key == 44 then -- 44 is ,
-        cycleColorMode()
-    end
-    if key == 46 then -- 46 is .
-        cycleDisplayMode()
+    if not custom_keybind_mode then
+        if key == 109 then -- 109 is m
+            toggleRange()
+        end
+        if key == 44 then -- 44 is ,
+            cycleColorMode()
+        end
+        if key == 46 then -- 46 is .
+            cycleDisplayMode()
+        end
     end
 end
 
@@ -144,11 +151,11 @@ function widget:DrawWorldPreUnit()
                 cColor = {0, 0, c, alpha}
             end
 
-            -- display modes: 0 - filled circles, 1 - empty circles, 2 - combined
+            -- display modes: 0 - empty circles, 1 - filled circles, 2 - combined
             -- draw empty circle
             if displayMode ~= 0 then
-                gl.Color(cColor[1], cColor[2], cColor[3], cColor[4] * 1.2)
-                gl.LineWidth(5)
+                gl.Color(cColor[1], cColor[2], cColor[3], cColor[4] * 1.3)
+                gl.LineWidth(4)
                 gl.DrawGroundCircle(x, y, z, range, 32)
             end
 
