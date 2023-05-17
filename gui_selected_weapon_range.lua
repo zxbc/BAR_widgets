@@ -1,7 +1,7 @@
 function widget:GetInfo()
     return {
         name      = "Selected Units Weapon Range",
-        desc      = "Displays range circles of selected units' weapons at all time. Press \\ key to toggle on/off; press ] key to cycle through colors; press [ key to cycle through display modes.",
+        desc      = "Displays range circles of selected units' weapons at all time. Press m key to toggle on/off; press , key to cycle through colors; press . key to cycle through display modes.",
         author    = "Errrrrrr",
         date      = "May 2023",
         version   = "1.2",
