@@ -4,7 +4,7 @@ function widget:GetInfo()
         desc      = "Displays range circles of selected units' weapons at all time. Press \\ key to toggle on/off; press ] key to cycle through colors; press [ key to cycle through display modes.",
         author    = "Errrrrrr",
         date      = "May 2023",
-        version   = "1.1",
+        version   = "1.2",
         license   = "GNU GPL, v2 or later",
         layer     = 0,
         enabled   = true,
@@ -13,9 +13,15 @@ function widget:GetInfo()
 end
 
 -----------------------------------------------------------------------------------------
--- Version 1.1:
+-- Version 1.2:
 -- Only displays the range of the first weapon of a unit for now
--- * ADDED CUSTOM KEYBINDS SUPPORT. Set "custom_keybind_mode" to true to use your own keys
+-- *ADDED CUSTOM KEYBINDS SUPPORT. 
+--  Set "custom_keybind_mode" to true to use your own keys
+--  Bindable actions:  weapon_range_toggle
+--                     weapon_range_cycle_color_mode
+--                     weapon_range_cycle_display_mode
+--
+-- Default keybinds: 
 -- Press 'm' key to toggle on and off range display of selected units (default on)
 -- Press ',' key to cycle between white, red, green, and blue color modes (default white)
 -- Press '.' key to cycle between filled, empty and combined modes (default filled)
