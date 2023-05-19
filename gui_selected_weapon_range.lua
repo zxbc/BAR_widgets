@@ -145,24 +145,25 @@ function widget:DrawWorldPreUnit()
             gl.PushMatrix()
             gl.Blending ("alpha")
 
-            c = range / 500     -- some reduction to saturation based on range and num units selected
+            c = range / 600   -- some reduction to saturation based on range and num units selected
+            c = c / (#weaponRanges * 0.15)
             c = c > 1 and 1 or c
             local cColor = {1, 1, 1, 0.5}
             if colorMode == 0 then
-                cColor = {c, c, c, alpha}
+                cColor = {1, 1, 1, c*alpha}
             elseif colorMode == 1 then
-                cColor = {c, 0, 0, alpha}
+                cColor = {1, 0, 0, c*alpha}
             elseif colorMode == 2 then
-                cColor = {0, c, 0, alpha}
+                cColor = {0, 1, 0, c*alpha}
             elseif colorMode == 3 then
-                cColor = {0, 0, c, alpha}
+                cColor = {0, 0, 1, c*alpha}
             end
 
             -- display modes: 0 - empty circles, 1 - filled circles, 2 - combined
             -- draw empty circle
             if displayMode ~= 0 then
-                gl.Color(cColor[1], cColor[2], cColor[3], cColor[4] * 1.3)
-                gl.LineWidth(4)
+                gl.Color(cColor[1], cColor[2], cColor[3], alpha * 1.2)
+                gl.LineWidth(3)
                 gl.DrawGroundCircle(x, y, z, range, 32)
             end
 
