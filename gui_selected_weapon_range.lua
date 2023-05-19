@@ -105,14 +105,17 @@ function widget:Update(dt)
     selChanged = false
     selectedUnits = Spring.GetSelectedUnits()
     --Spring.Echo("units selected: " .. #selectedUnits)
-
     weaponRanges = {}
 
     -- Loop through each selected unit and get its weapon ranges
     for i, unitID in ipairs(selectedUnits) do
-        local weaponRange = Spring.GetUnitWeaponState(unitID, 1, "range")
-        if weaponRange then
-            table.insert(weaponRanges, {unitID = unitID, range = weaponRange})
+        --local weaponRange = Spring.GetUnitWeaponState(unitID, 1, "range")
+        local unitDef = GetUnitDef(unitID)
+        if unitDef then
+            local weaponRange = unitDef.maxWeaponRange
+            if weaponRange then
+                table.insert(weaponRanges, {unitID = unitID, range = weaponRange})
+            end
         end
     end
 end
@@ -185,6 +188,15 @@ function widget:DrawWorldPreUnit()
         end
     end
     gl.DepthTest(true)
+end
+
+function GetUnitDef(unitID)
+    local unitDefID = Spring.GetUnitDefID(unitID)
+    if unitDefID then
+        local unitDef = UnitDefs[unitDefID]
+        return unitDef
+    end
+    return nil
 end
 
 
