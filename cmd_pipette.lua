@@ -1,6 +1,6 @@
 function widget:GetInfo()
     return {
-        name      = "Copy Blueprint",
+        name      = "Pipette Build",
         desc      = "Copy a blueprint of the unit/building under the mouse cursor. Default keybind 'shift-q'. If you copy on top of empty space, the previously successfully copied blueprint will be used again.",
         author    = "Errrrrrr",
         date      = "May 20, 2023",
@@ -16,7 +16,7 @@ end
 -- Default keybind is "shift-q"
 --
 -- Set custom_keybind_mode to true for custom keybind.
--- Bindable action name: copy_blueprint
+-- Bindable action name: pipette_build
 -------------------------------------------------------------------------------------
 local custom_keybind_mode = false
 
@@ -24,14 +24,14 @@ local targetUnitID
 
 function widget:Initialize()
     targetUnitID = nil
-    widgetHandler.actionHandler:AddAction(self, "copy_blueprint", copyBlueprint, nil, "p")
+    widgetHandler.actionHandler:AddAction(self, "pipette_build", pipetteBuild, nil, "p")
 end
 
 function widget:Shutdown()
     targetUnitID = nil
 end
 
-function copyBlueprint(_, _, args)
+function pipetteBuild(_, _, args)
   doCopy()
 end
 
