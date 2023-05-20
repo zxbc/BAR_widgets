@@ -112,7 +112,14 @@ function widget:Update(dt)
         --local weaponRange = Spring.GetUnitWeaponState(unitID, 1, "range")
         local unitDef = GetUnitDef(unitID)
         if unitDef then
-            local weaponRange = unitDef.maxWeaponRange
+            local weaponRange = nil
+            -- if it's a builder, we display build range instead
+            if unitDef.isBuilder then
+                weaponRange = unitDef.buildDistance
+            else -- normal unit
+                weaponRange = unitDef.maxWeaponRange
+            end
+
             if weaponRange then
                 table.insert(weaponRanges, {unitID = unitID, range = weaponRange})
             end
