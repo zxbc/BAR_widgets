@@ -4,7 +4,7 @@ function widget:GetInfo()
         desc      = "Displays range circles of selected units' weapons at all time. Press m key to toggle on/off; press , key to cycle through colors; press . key to cycle through display modes.",
         author    = "Errrrrrr",
         date      = "May 2023",
-        version   = "1.2",
+        version   = "1.3",
         license   = "GNU GPL, v2 or later",
         layer     = 0,
         enabled   = true,
@@ -13,11 +13,14 @@ function widget:GetInfo()
 end
 
 -----------------------------------------------------------------------------------------
--- Version 1.2:
--- Only displays the range of the first weapon of a unit for now
--- *ADDED CUSTOM KEYBINDS SUPPORT. 
---  Set "custom_keybind_mode" to true to use your own keys
---  Bindable actions:  weapon_range_toggle
+-- Version 1.3:
+-- What's new: 
+-- -- Now displays max weapon range for all units.
+-- -- Displays a separate dgun range for commander. Comm alpha set to max to stand out.
+-- -- Tweaked max and min saturation (should no longer see overly bright or dim display).
+-- 
+-- Set "custom_keybind_mode" to true to use your own keys.
+-- Bindable actions:   weapon_range_toggle
 --                     weapon_range_cycle_color_mode
 --                     weapon_range_cycle_display_mode
 --
@@ -45,16 +48,23 @@ local colorMode = 0
 local colorModeNames = { "white", "red", "green", "blue" }
 local displayMode = 0
 
+local isCommander = {}
+for unitDefID, unitDef in pairs(UnitDefs) do
+	if unitDef.customParams.iscommander then
+		isCommander[unitDefID] = true
+	end
+end
+
 -- Initialize the widget
 function widget:Initialize()
     selectedUnits = {}
     weaponRanges = {}
-    widgetHandler:RegisterGlobal('KeyPress', function(key, mods, isRepeat)
-        return self:KeyPress(key, mods, isRepeat)
-    end)
-    widgetHandler.actionHandler:AddAction(self, "weapon_range_toggle", toggleRange, nil, "p")
-    widgetHandler.actionHandler:AddAction(self, "weapon_range_cycle_color_mode", cycleColorMode, nil, "p")
-    widgetHandler.actionHandler:AddAction(self, "weapon_range_cycle_display_mode", cycleDisplayMode, nil, "p")
+
+    if custom_keybind_mode then
+        widgetHandler.actionHandler:AddAction(self, "weapon_range_toggle", toggleRange, nil, "p")
+        widgetHandler.actionHandler:AddAction(self, "weapon_range_cycle_color_mode", cycleColorMode, nil, "p")
+        widgetHandler.actionHandler:AddAction(self, "weapon_range_cycle_display_mode", cycleDisplayMode, nil, "p")
+    end
 end
 
 function widget:Shutdown()
@@ -121,8 +131,15 @@ function widget:Update(dt)
             end
 
             if weaponRange then
-                table.insert(weaponRanges, {unitID = unitID, range = weaponRange})
+                if isCommander[unitDef.id] then -- let's also add dgun range
+                    local dgunRange = Spring.GetUnitWeaponState(unitID, 3, "range")
+                    table.insert(weaponRanges, {unitID = unitID, range = weaponRange, factor = 50})
+                    table.insert(weaponRanges, {unitID = unitID, range = dgunRange, factor = 50})
+                else
+                    table.insert(weaponRanges, {unitID = unitID, range = weaponRange, factor = 1})
+                end
             end
+
         end
     end
 end
@@ -156,8 +173,9 @@ function widget:DrawWorldPreUnit()
             gl.Blending ("alpha")
 
             c = range / 600   -- some reduction to saturation based on range and num units selected
-            c = c / (#weaponRanges * 0.15)
+            c = c / (#weaponRanges * 0.15) * weaponRange.factor
             c = c > 1 and 1 or c
+            c = c < 0.15 and 0.15 or c
             local cColor = {1, 1, 1, 0.5}
             if colorMode == 0 then
                 cColor = {1, 1, 1, c*alpha}
