@@ -1,9 +1,9 @@
 function widget:GetInfo()
    return {
       name      = "Health Bars GL4",
-      desc      = "Yes this healthbars, just gl4",
+      desc      = "Yes this healthbars, just gl4. Modified to be thicker, less rounded, and with stockpile number display.",
       author    = "Beherith, modified by Errrrrrr",
-      date      = "2023",
+      date      = "May 2023",
       license   = "GNU GPL, v2 or later for Lua code, (c) Beherith (mysterme@gmail.com) for GLSL",
       layer     = 10,
       enabled   = true
@@ -1308,10 +1308,7 @@ function widget:DrawWorld()
 end
 
 function DrawStockpile(numStockpiled, numStockpileQued)
-	--// DRAW STOCKPILED MISSLES
 	gl.Color(1, 1, 1, 1)
-	local barWidth = 10
-	local barHeight = 8
 	gl.Text(numStockpiled .. '/' .. (numStockpiled + numStockpileQued),  50, -50, 20, "rbos")
 end
 
