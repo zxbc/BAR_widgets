@@ -1,7 +1,7 @@
 function widget:GetInfo()
    return {
       name      = "Health Bars GL4",
-      desc      = "Yes this healthbars, just gl4. Modified to be thicker, less rounded, and with stockpile number display.",
+      desc      = "Yes this healthbars, just gl4. Modified to be thicker, less rounded, and with stockpile number display. Stockpile bar also autohides when none is queued.",
       author    = "Beherith, modified by Errrrrrr",
       date      = "May 2023",
       license   = "GNU GPL, v2 or later for Lua code, (c) Beherith (mysterme@gmail.com) for GLSL",
