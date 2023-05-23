@@ -391,8 +391,8 @@ local shaderConfig = { -- these are our shader defines
 }
 shaderConfig.CLIPTOLERANCE = 1.2
 shaderConfig.BARWIDTH = 2.56	-- default 2.56
-shaderConfig.BARHEIGHT = 1.90	-- default 0.80
-shaderConfig.BARCORNER = shaderConfig.BARHEIGHT /15
+shaderConfig.BARHEIGHT = 1.60	-- default 0.80
+shaderConfig.BARCORNER = shaderConfig.BARHEIGHT /12
 shaderConfig.SMALLERCORNER = shaderConfig.BARCORNER * 0.6
 shaderConfig.BGBOTTOMCOLOR = "vec4(0.25, 0.25, 0.25, 0.8)"
 shaderConfig.BGTOPCOLOR = "vec4(0.1, 0.1, 0.1, 0.8)"
@@ -401,8 +401,8 @@ shaderConfig.PERCENT_VISIBILITY_MAX = 0.99
 shaderConfig.TIMER_VISIBILITY_MIN = 0.0
 shaderConfig.BARSTEP = 10 -- pixels to downshift per new bar
 shaderConfig.BOTTOMDARKENFACTOR = 0.5
-shaderConfig.BARFADESTART = 3200
-shaderConfig.BARFADEEND = 3800
+shaderConfig.BARFADESTART = 4000
+shaderConfig.BARFADEEND = 5000
 shaderConfig.ATLASSTEP = 0.0625
 shaderConfig.MINALPHA = 0.2
 if debugmode then
@@ -653,7 +653,10 @@ local function addBarsForUnit(unitID, unitDefID, unitTeam, unitAllyTeam, reason)
 
 		if unitDefCanStockpile[unitDefID] and ((unitAllyTeam == myAllyTeamID) or fullview) then
 			unitStockPileWatch[unitID] = 0.0
-			addBarForUnit(unitID, unitDefID, "stockpile", reason)
+			local s, q, b = Spring.GetUnitStockpile(unitID)
+			if q ~= 0 then
+				addBarForUnit(unitID, unitDefID, "stockpile", reason)
+			end
 		end
 		if  capture > 0 then
 			addBarForUnit(unitID, unitDefID, "capture", reason)
@@ -1191,8 +1194,11 @@ function widget:GameFrame(n)
 				--uniformcache[1] =  128*numStockpileQued + numStockpiled + stockpileBuild -- the worlds nastiest hack
 				unitStockPileWatch[unitID] = stockpileBuild
 				gl.SetUnitBufferUniforms(unitID, uniformcache, 2)
+				addBarForUnit(unitID, Spring.GetUnitDefID(unitID), "stockpile", "progress")
 			end
-			
+			if numStockpileQued == 0 then
+				removeBarFromUnit(unitID, 'stockpile', 'noneQueued')
+			end
 		end
 	end
 end
