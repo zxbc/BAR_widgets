@@ -49,13 +49,45 @@ function fireDgun()
                 local mouseX, mouseY = Spring.GetMouseState()
                 local desc, args = Spring.TraceScreenRay(mouseX, mouseY, true)
                 
+                local params
                 if desc and desc == "unit" then
-                    local targetUnitID = args
-                    Spring.GiveOrderToUnit(selectedUnitID, CMD.DGUN, { targetUnitID }, {})
+                    params = {args}
                 elseif desc and desc == "ground" then
-                    Spring.GiveOrderToUnit(selectedUnitID, CMD.DGUN, { args[1],args[2],args[3] }, {})
-                end             
+                    params = {args[1], args[2], args[3]}
+                end
+
+                local alt, ctrl, meta, shift = GetModKeys()
+                local cmdOpts = GetCmdOpts(alt, ctrl, meta, shift, false)
+                local altOpts = GetCmdOpts(true, false, false, false, false)
+
+                Spring.GiveOrderToUnit(selectedUnitID, CMD.INSERT, {0, CMD.DGUN, cmdOpts.coded, unpack(params)}, altOpts)
+                --Spring.GiveOrderToUnit(selectedUnitID, CMD.DGUN, params, cmdOpts)
+   
                 return true
             end
         end
+end
+
+function GetModKeys()
+    local alt, ctrl, meta, shift = Spring.GetModKeyState()
+  
+    if Spring.GetInvertQueueKey() then -- Shift inversion
+        shift = not shift
+    end
+  
+    return alt, ctrl, meta, shift
+end
+
+function GetCmdOpts(alt, ctrl, meta, shift, right)
+    local opts = { alt=alt, ctrl=ctrl, meta=meta, shift=shift, right=right }
+    local coded = 0
+  
+    if alt   then coded = coded + CMD.OPT_ALT   end
+    if ctrl  then coded = coded + CMD.OPT_CTRL  end
+    if meta  then coded = coded + CMD.OPT_META  end
+    if shift then coded = coded + CMD.OPT_SHIFT end
+    if right then coded = coded + CMD.OPT_RIGHT end
+  
+    opts.coded = coded
+    return opts
 end
