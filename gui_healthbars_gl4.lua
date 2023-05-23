@@ -391,7 +391,7 @@ local shaderConfig = { -- these are our shader defines
 }
 shaderConfig.CLIPTOLERANCE = 1.2
 shaderConfig.BARWIDTH = 2.56	-- default 2.56
-shaderConfig.BARHEIGHT = 1.60	-- default 0.80
+shaderConfig.BARHEIGHT = 1.80	-- default 0.80
 shaderConfig.BARCORNER = shaderConfig.BARHEIGHT /12
 shaderConfig.SMALLERCORNER = shaderConfig.BARCORNER * 0.6
 shaderConfig.BGBOTTOMCOLOR = "vec4(0.25, 0.25, 0.25, 0.8)"
