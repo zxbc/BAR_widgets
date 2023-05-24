@@ -76,7 +76,6 @@ end
 -- return true if selecting only commander and command was successful
 function fireDgun()
     if commID then
-        Spring.Echo("we fired")
         local mouseX, mouseY = Spring.GetMouseState()
         local desc, args = Spring.TraceScreenRay(mouseX, mouseY, true)
         
