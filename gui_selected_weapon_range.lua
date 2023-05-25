@@ -133,8 +133,10 @@ function widget:Update(dt)
             if weaponRange then
                 if isCommander[unitDef.id] then -- let's also add dgun range
                     local dgunRange = Spring.GetUnitWeaponState(unitID, 3, "range")
+                    local fireRange = unitDef.maxWeaponRange
                     table.insert(weaponRanges, {unitID = unitID, range = weaponRange, factor = 50})
                     table.insert(weaponRanges, {unitID = unitID, range = dgunRange, factor = 50})
+                    table.insert(weaponRanges, {unitID = unitID, range = fireRange, factor = 50})
                 else
                     table.insert(weaponRanges, {unitID = unitID, range = weaponRange, factor = 1})
                 end
