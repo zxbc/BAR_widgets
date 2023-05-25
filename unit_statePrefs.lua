@@ -49,6 +49,17 @@ function widget:Initialize()
 end
 
 function widget:CommandNotify(cmdID, cmdParams, cmdOpts)
+	-- need to filter only state commands!
+	if cmdID > 1000 or cmdID < 0 then 
+		Spring.Echo("Not a state change command!")
+		return false 
+	end
+	local cmdName = CMD[cmdID].name
+	if cmdName and not cmdName.find("STATE") then
+		Spring.Echo("Not a state change command!")
+		return false
+	end
+
 	local selectedUnits = Spring.GetSelectedUnits()
 	for i = 1, #selectedUnits do
 		local unitID = selectedUnits[i]
