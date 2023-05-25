@@ -33,6 +33,12 @@ function widget:Initialize()
         widgetHandler.actionHandler:AddAction(self, "instant_dgun_press", showDgun, nil, "R")
         widgetHandler.actionHandler:AddAction(self, "instant_dgun_release", fireDgun, nil, "r")
     end
+    local sel = Spring.GetSelectedUnits()
+    if #sel == 1 and isCommander[Spring.GetUnitDefID(sel[1])] then
+        commID = sel[1]
+    else
+        commID = nil
+    end
 end
 
 function dgunPress(_, _, args)
@@ -64,7 +70,6 @@ function showDgun()
 end
 
 function widget:SelectionChanged(sel)
-    
     if #sel == 1 and isCommander[Spring.GetUnitDefID(sel[1])] then
         commID = sel[1]
     else
@@ -84,6 +89,9 @@ function fireDgun()
             params = {args}
         elseif desc and desc == "ground" then
             params = {args[1], args[2], args[3]}
+        elseif desc == "feature" then
+            local fx, fy, fz = Spring.GetFeaturePosition(args, true)
+            params = {fx, fy, fz}
         end
     
         local alt, ctrl, meta, shift = GetModKeys()
