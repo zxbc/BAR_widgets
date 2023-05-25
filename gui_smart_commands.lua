@@ -5,11 +5,19 @@ function widget:GetInfo()
         author    = "Errrrrrr",
         date      = "May 2023",
         license   = "GNU GPL, v2 or later",
+        version   = "1.0",
         layer     = -9999,
         enabled   = true,
         handler   = true,
     }
 end
+
+--------------------------------------------------------------------------------------------
+-- insert_mode toggle makes all commands issued automatically inserted at front of queue
+-- If you use insert_mode, meta + key will be normal mode
+-- Bind action "gui_smart_commands_insert_mode_toggle" to use custom key bind toggle
+--------------------------------------------------------------------------------------------
+local insert_mode = false
 
 local retain_aiming = false
 
@@ -18,24 +26,46 @@ local curCmd
 local active = false
 local mouseClicked = false
 
+local echo = Spring.Echo
+
+function widget:Initialize()
+    widgetHandler.actionHandler:AddAction(self, "gui_smart_commands_insert_mode_toggle", insertMode, nil, "p")
+end
+
+function insertMode(_,_,args)
+    insert_mode = not insert_mode
+    echo("Smart Commands - insert_mode changed to : "..tostring(insert_mode))
+end
+
 function widget:MousePress(x, y, button)
-    if active then
-        mouseClicked = true
-    end
+    mouseClicked = true
+    --echo("mouse clicked TRUE")
 end
 
 function widget:KeyPress(key, mods, isRepeat)
-    if isRepeat then
-        active = true
+    if mouseClicked and not isRepeat then 
+        mouseClicked = false 
+        --echo("mouse clicked FALSE")
     end
+    active = true
+    --echo("active")
     return false
 end
 
 function widget:KeyRelease(key)
+    if active and mouseClicked then
+        mouseClicked = false 
+        --echo("mouseClicked false")
+        if not retain_aiming then
+            Spring.SetActiveCommand(0)
+        end
+        return
+    end
     local cmdIndex, cmdID, cmdType, cmdName = Spring.GetActiveCommand()
     if cmdID ~= nil and cmdID > 0 then  -- skip build commands
         curCmd = cmdID
         executeCommand()
+        active = false
     end
 end
 
@@ -44,11 +74,6 @@ function widget:SelectionChanged(sel)
 end
 
 function executeCommand()
-    if mouseClicked then -- this is kind of a hack to reset active command
-        mouseClicked = false
-        Spring.SetActiveCommand(0)
-        return 
-    end
     if curCmd ~= nil then
         local mouseX, mouseY = Spring.GetMouseState()
         local desc, args = Spring.TraceScreenRay(mouseX, mouseY, false)
@@ -67,6 +92,7 @@ function executeCommand()
         local alt, ctrl, meta, shift = GetModKeys()
         local cmdOpts
         local altOpts = GetCmdOpts(true, false, false, false, false)
+        if insert_mode and curCmd ~= 34923 then meta = not meta end -- insert doesn't play nice with set_target
         if meta then
             cmdOpts = GetCmdOpts(alt, ctrl, false, shift, false)
             Spring.GiveOrderToUnitArray(selectedUnits, CMD.INSERT, {0, curCmd, cmdOpts.coded, unpack(params)}, altOpts)
@@ -84,6 +110,7 @@ end
 function widget:UnitCommand(unitID, unitDefID, unitTeam, cmdID, cmdParams, cmdOpts, cmdTag)
     if mouseClicked then
         active = false
+        --echo("not active")
         curCmd = nil
         Spring.SetActiveCommand(0)
     end
