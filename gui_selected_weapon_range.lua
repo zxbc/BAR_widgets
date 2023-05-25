@@ -180,17 +180,17 @@ function widget:DrawWorldPreUnit()
             if colorMode == 0 then
                 cColor = {1, 1, 1, c*alpha}
             elseif colorMode == 1 then
-                cColor = {1, 0, 0, c*alpha}
+                cColor = {0.7, 0.3, 0.3, c*alpha}
             elseif colorMode == 2 then
-                cColor = {0, 1, 0, c*alpha}
+                cColor = {0.3, 0.7, 0.3, c*alpha}
             elseif colorMode == 3 then
-                cColor = {0, 0, 1, c*alpha}
+                cColor = {0.3, 0.3, 0.7, c*alpha}
             end
 
             -- display modes: 0 - empty circles, 1 - filled circles, 2 - combined
             -- draw empty circle
             if displayMode ~= 0 then
-                gl.Color(cColor[1], cColor[2], cColor[3], alpha * 1.2)
+                gl.Color(cColor[1], cColor[2], cColor[3], alpha * 1.5)
                 gl.LineWidth(3)
                 gl.DrawGroundCircle(x, y, z, range, 32)
             end
