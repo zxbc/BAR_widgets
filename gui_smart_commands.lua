@@ -1,7 +1,7 @@
 function widget:GetInfo()
     return {
         name      = "Smart Commands",
-        desc      = "Smart cast any command. Key down to set command active, key up to issue command. Alt+backspace to toggle on and off.",
+        desc      = "Smart cast any command. Key down to set command active, key up to issue command. Alt+backspace to toggle on and off. Alt+i to toggle insert mode.",
         author    = "Errrrrrr",
         date      = "May 2023",
         license   = "GNU GPL, v2 or later",
@@ -13,7 +13,7 @@ function widget:GetInfo()
 end
 
 --------------------------------------------------------------------------------------------
--- Default alt+backspace to toggle on and off
+-- Default alt+'backspace' to toggle on and off, alt+'1' to toggle insert_mode
 -- insert_mode toggle makes all commands issued automatically inserted at front of queue
 -- If you use insert_mode, meta + key will be normal mode
 -- Key bind actions: "gui_smart_commands_insert_mode_toggle"
@@ -55,6 +55,9 @@ end
 function widget:KeyPress(key, mods, isRepeat)
     if key == 8 and mods.alt then   -- alt+backspace
         toggle()
+    end
+    if key == 105 and mods.alt then  -- alt+'i'
+        insertMode()
     end
 
     if not enabled then return false end
