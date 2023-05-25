@@ -20,7 +20,7 @@ end
 local insert_mode = false
 
 local retain_aiming = false
-
+local enabled = true
 local selectedUnits = {}
 local active = false
 local mouseClicked = false
@@ -29,6 +29,13 @@ local echo = Spring.Echo
 
 function widget:Initialize()
     widgetHandler.actionHandler:AddAction(self, "gui_smart_commands_insert_mode_toggle", insertMode, nil, "p")
+    widgetHandler.actionHandler:AddAction(self, "gui_smart_commands_onoff_toggle", toggle, nil, "p")
+end
+
+function toggle(_,_,args)
+    enabled = not enabled
+    local status = enabled and "on" or "off"
+    echo("Smart Commands toggled ".. status)
 end
 
 function insertMode(_,_,args)
@@ -37,11 +44,19 @@ function insertMode(_,_,args)
 end
 
 function widget:MousePress(x, y, button)
+    if not enabled then return false end
+
     mouseClicked = true
     --echo("mouse clicked TRUE")
 end
 
 function widget:KeyPress(key, mods, isRepeat)
+    if key == 8 and mods.alt then   -- alt+backspace
+        toggle()
+    end
+
+    if not enabled then return false end
+
     if mouseClicked and not isRepeat then 
         mouseClicked = false 
         --echo("mouse clicked FALSE")
@@ -52,6 +67,8 @@ function widget:KeyPress(key, mods, isRepeat)
 end
 
 function widget:KeyRelease(key)
+    if not enabled then return false end
+
     if active and mouseClicked then
         mouseClicked = false 
         --echo("mouseClicked false")
@@ -68,41 +85,47 @@ function widget:KeyRelease(key)
 end
 
 function widget:SelectionChanged(sel)
+    if not enabled then return false end
+
     selectedUnits = sel
 end
 
 function executeCommand(cmdID)
-        local mouseX, mouseY = Spring.GetMouseState()
-        local desc, args = Spring.TraceScreenRay(mouseX, mouseY, false)
-        if desc == nil then 
-            return 
-        end
+    if not enabled then return false end
 
-        local params = {}
-        if desc == "unit" then
-            params = {args}
-        elseif desc == "feature" then
-            params = {args+32000} -- seriously wtf
-        else
-            params = {args[1], args[2], args[3]}
-        end
-        local alt, ctrl, meta, shift = GetModKeys()
-        local cmdOpts
-        local altOpts = GetCmdOpts(true, false, false, false, false)
-        if insert_mode and cmdID ~= 34923 then meta = not meta end -- insert doesn't play nice with set_target
-        if meta then
-            cmdOpts = GetCmdOpts(alt, ctrl, false, shift, false)
-            Spring.GiveOrderToUnitArray(selectedUnits, CMD.INSERT, {0, cmdID, cmdOpts.coded, unpack(params)}, altOpts)
-        else
-            cmdOpts = GetCmdOpts(alt, ctrl, meta, shift, false)
-            Spring.GiveOrderToUnitArray(selectedUnits, cmdID, params, cmdOpts)
-        end
-        if not retain_aiming then
-            Spring.SetActiveCommand(0)
-        end
+    local mouseX, mouseY = Spring.GetMouseState()
+    local desc, args = Spring.TraceScreenRay(mouseX, mouseY, false)
+    if desc == nil then 
+        return 
+    end
+
+    local params = {}
+    if desc == "unit" then
+        params = {args}
+    elseif desc == "feature" then
+        params = {args+32000} -- seriously wtf
+    else
+        params = {args[1], args[2], args[3]}
+    end
+    local alt, ctrl, meta, shift = GetModKeys()
+    local cmdOpts
+    local altOpts = GetCmdOpts(true, false, false, false, false)
+    if insert_mode and cmdID ~= 34923 then meta = not meta end -- insert doesn't play nice with set_target
+    if meta then
+        cmdOpts = GetCmdOpts(alt, ctrl, false, shift, false)
+        Spring.GiveOrderToUnitArray(selectedUnits, CMD.INSERT, {0, cmdID, cmdOpts.coded, unpack(params)}, altOpts)
+    else
+        cmdOpts = GetCmdOpts(alt, ctrl, meta, shift, false)
+        Spring.GiveOrderToUnitArray(selectedUnits, cmdID, params, cmdOpts)
+    end
+    if not retain_aiming then
+        Spring.SetActiveCommand(0)
+    end
 end
 
 function widget:UnitCommand(unitID, unitDefID, unitTeam, cmdID, cmdParams, cmdOpts, cmdTag)
+    if not enabled then return false end
+
     if mouseClicked then
         active = false
         --echo("not active")
