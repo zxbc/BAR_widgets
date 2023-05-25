@@ -29,6 +29,10 @@ local mouseClicked = false
 
 local echo = Spring.Echo
 
+local skipFeatureCmd = {    -- pending more 
+    [CMD.ATTACK]=true, [CMD.PATROL]=true, [CMD.FIGHT]=true, [CMD.MANUALFIRE]=true
+}
+
 function widget:Initialize()
     widgetHandler.actionHandler:AddAction(self, "gui_smart_commands_insert_mode_toggle", insertMode, nil, "p")
     widgetHandler.actionHandler:AddAction(self, "gui_smart_commands_onoff_toggle", toggle, nil, "p")
@@ -109,6 +113,10 @@ function executeCommand(cmdID)
         params = {args}
     elseif desc == "feature" then
         params = {args+32000} -- seriously wtf
+        if skipFeatureCmd[cmdID] then
+            local fx, fy, fz = Spring.GetFeaturePosition(args, true)
+            params = {fx, fy, fz}
+        end
     else
         params = {args[1], args[2], args[3]}
     end
