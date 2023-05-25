@@ -49,14 +49,16 @@ function widget:Initialize()
 end
 
 function widget:CommandNotify(cmdID, cmdParams, cmdOpts)
+	local alt, ctrl, meta, shift = Spring.GetModKeyState()
+	if not ctrl then return false end
 	-- need to filter only state commands!
 	if cmdID > 1000 or cmdID < 0 then 
-		Spring.Echo("Not a state change command!")
+		--Spring.Echo("Not a state change command!")
 		return false 
 	end
 	local cmdName = CMD[cmdID].name
 	if cmdName and not cmdName.find("STATE") then
-		Spring.Echo("Not a state change command!")
+		--Spring.Echo("Not a state change command!")
 		return false
 	end
 
@@ -67,12 +69,11 @@ function widget:CommandNotify(cmdID, cmdParams, cmdOpts)
 		local unitTeam = Spring.GetUnitTeam(unitID)
 		local name = unitName[unitDefID]
 		unitSet[name] = unitSet[name] or {}
-		local alt, ctrl, meta, shift = Spring.GetModKeyState()
-		if ctrl and #cmdParams == 1 and not (unitSet[name][cmdID] == cmdParams[1]) then
+		if #cmdParams == 1 and not (unitSet[name][cmdID] == cmdParams[1]) then
 			unitSet[name][cmdID] = cmdParams[1]
 			Spring.Echo("State pref changed:  " .. name ..",  " .. CMD[cmdID] .." "..(cmdParams[1]))
 			table.save(unitSet, "LuaUI/config/StatesPrefs.lua", "--States prefs")
-			-- adding a sound cue for now
+
 			-- Spring.PlaySoundFile('LuaUI/sounds/volume_osd/pop.wav', 1.0, 'ui')
 		end
 	end
