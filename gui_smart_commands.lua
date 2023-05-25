@@ -22,7 +22,6 @@ local insert_mode = false
 local retain_aiming = false
 
 local selectedUnits = {}
-local curCmd
 local active = false
 local mouseClicked = false
 
@@ -63,8 +62,7 @@ function widget:KeyRelease(key)
     end
     local cmdIndex, cmdID, cmdType, cmdName = Spring.GetActiveCommand()
     if cmdID ~= nil and cmdID > 0 then  -- skip build commands
-        curCmd = cmdID
-        executeCommand()
+        executeCommand(cmdID)
         active = false
     end
 end
@@ -73,8 +71,7 @@ function widget:SelectionChanged(sel)
     selectedUnits = sel
 end
 
-function executeCommand()
-    if curCmd ~= nil then
+function executeCommand(cmdID)
         local mouseX, mouseY = Spring.GetMouseState()
         local desc, args = Spring.TraceScreenRay(mouseX, mouseY, false)
         if desc == nil then 
@@ -92,26 +89,23 @@ function executeCommand()
         local alt, ctrl, meta, shift = GetModKeys()
         local cmdOpts
         local altOpts = GetCmdOpts(true, false, false, false, false)
-        if insert_mode and curCmd ~= 34923 then meta = not meta end -- insert doesn't play nice with set_target
+        if insert_mode and cmdID ~= 34923 then meta = not meta end -- insert doesn't play nice with set_target
         if meta then
             cmdOpts = GetCmdOpts(alt, ctrl, false, shift, false)
-            Spring.GiveOrderToUnitArray(selectedUnits, CMD.INSERT, {0, curCmd, cmdOpts.coded, unpack(params)}, altOpts)
+            Spring.GiveOrderToUnitArray(selectedUnits, CMD.INSERT, {0, cmdID, cmdOpts.coded, unpack(params)}, altOpts)
         else
             cmdOpts = GetCmdOpts(alt, ctrl, meta, shift, false)
-            Spring.GiveOrderToUnitArray(selectedUnits, curCmd, params, cmdOpts)
+            Spring.GiveOrderToUnitArray(selectedUnits, cmdID, params, cmdOpts)
         end
         if not retain_aiming then
             Spring.SetActiveCommand(0)
         end
-        curCmd = nil
-    end
 end
 
 function widget:UnitCommand(unitID, unitDefID, unitTeam, cmdID, cmdParams, cmdOpts, cmdTag)
     if mouseClicked then
         active = false
         --echo("not active")
-        curCmd = nil
         Spring.SetActiveCommand(0)
     end
 end
