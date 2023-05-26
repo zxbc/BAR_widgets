@@ -91,6 +91,8 @@ function widget:KeyPress(key, mods, isRepeat)
         mouseClicked = false 
         --echo("mouse clicked FALSE")
     end
+    local cmdIndex, cmdID, cmdType, cmdName = GetActiveCommand()
+    if (cmdID and cmdID < 0) or (cmdID and skipAltogether[cmdID]) then return false end
     active = true
     --echo("active")
     return false
@@ -171,7 +173,7 @@ end
 function widget:UnitCommand(unitID, unitDefID, unitTeam, cmdID, cmdParams, cmdOpts, cmdTag)
     if not enabled then return false end
 
-    if mouseClicked and cmdID > 0 then
+    if active and mouseClicked and cmdID > 0 then
         active = false
         --echo("not active")
         --echo("UnitCommand set0")
