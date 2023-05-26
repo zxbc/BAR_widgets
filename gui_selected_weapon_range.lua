@@ -163,7 +163,7 @@ function widget:Update(dt)
                 weaponRange = unitDef.maxWeaponRange
             end
 
-            if weaponRange and #weaponRanges < 50 then
+            if weaponRange and (#weaponRanges < 50 or isCommander[unitDef.id]) then
                 if isCommander[unitDef.id] then -- let's also add dgun range
                     local dgunRange = GetUnitWeaponState(unitID, 3, "range")
                     local fireRange = unitDef.maxWeaponRange
