@@ -30,6 +30,8 @@ local metaDown = false
 -- shortcuts
 local echo = Spring.Echo
 local GetActiveCommand = Spring.GetActiveCommand
+local GetSelectedUnits = Spring.GetSelectedUnits
+local GetUnitPosition = Spring.GetUnitPosition
 local GetFeaturePosition = Spring.GetFeaturePosition
 local GetModKeyState = Spring.GetModKeyState
 local GetInvertQueueKey = Spring.GetInvertQueueKey
@@ -48,6 +50,7 @@ local skipAltogether = {
 }
 
 function widget:Initialize()
+    selectedUnits = GetSelectedUnits()
     widgetHandler.actionHandler:AddAction(self, "gui_smart_commands_insert_mode_toggle", insertMode, nil, "p")
     widgetHandler.actionHandler:AddAction(self, "gui_smart_commands_onoff_toggle", toggle, nil, "p")
 end
@@ -137,6 +140,10 @@ function executeCommand(cmdID)
     local params = {}
     if desc == "unit" then
         params = {args}
+        if CMD.FIGHT == cmdID or CMD.PATROL == cmdID then
+            local fx, fy, fz = GetUnitPosition(args, true)
+            params = {fx, fy, fz}
+        end
     elseif desc == "feature" then
         params = {args+32000} -- seriously wtf
         if skipFeatureCmd[cmdID] then
