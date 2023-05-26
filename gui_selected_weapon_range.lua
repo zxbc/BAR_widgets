@@ -1,10 +1,10 @@
 function widget:GetInfo()
     return {
         name      = "Selected Units Weapon Range",
-        desc      = "Displays range circles of selected units' weapons at all time. Press m key to toggle on/off; press , key to cycle through colors; press . key to cycle through display modes.",
+        desc      = "Displays range circles of selected units' weapons at all time. Press m key to toggle on/off; press , key to cycle through colors; press . key to cycle through display modes. All keys rebindable, please read file for details.",
         author    = "Errrrrrr",
         date      = "May 2023",
-        version   = "1.3",
+        version   = "1.4",
         license   = "GNU GPL, v2 or later",
         layer     = 0,
         enabled   = true,
@@ -13,8 +13,10 @@ function widget:GetInfo()
 end
 
 -----------------------------------------------------------------------------------------
--- Version 1.3:
+-- Version 1.4:
 -- What's new: 
+-- -- Optimized some code and increased max number of ranges displayed by default to 100
+-- -- Added display of build ranges.
 -- -- Now displays max weapon range for all units.
 -- -- Displays a separate dgun range for commander. Comm alpha set to max to stand out.
 -- -- Tweaked max and min saturation (should no longer see overly bright or dim display).
@@ -31,7 +33,7 @@ end
 -----------------------------------------------------------------------------------------
 
 local maxDrawDistance = 5000    -- Max camera distance at which to draw ranges of selected units (default 5000)
-local maxNumRanges = 50         -- Max number of ranges to display (default 50)
+local maxNumRanges = 100         -- Max number of ranges to display (default 100)
                                 -- If you select more than this number of units, only this many will be drawn, starting from highest ranges
 local alpha = 0.07              -- Alpha value for the drawing (default at 0.07)
                                 -- Remember circles overlap and become denser in color!
@@ -161,7 +163,7 @@ function widget:Update(dt)
                 weaponRange = unitDef.maxWeaponRange
             end
 
-            if weaponRange then
+            if weaponRange and #weaponRanges < 50 then
                 if isCommander[unitDef.id] then -- let's also add dgun range
                     local dgunRange = GetUnitWeaponState(unitID, 3, "range")
                     local fireRange = unitDef.maxWeaponRange
@@ -180,14 +182,23 @@ end
 -- Draw stuff
 function widget:DrawWorldPreUnit()
     if not selectedUnits or not weaponRanges or not toggle then return end
+
+    local curHeight
+    local camState = Spring.GetCameraState()
+    if (camState.name == "ta") then 
+        curHeight = camState.height
+    elseif (camState.name == "spring") then 
+        curHeight = camState.dist 
+    end
+    if curHeight and curHeight > maxDrawDistance then return end
+
     if #weaponRanges > maxNumRanges then   -- too many ranges to render
         -- let's sort by range, high to low
         sort(weaponRanges, function(a, b) return a.range > b.range end)
-        while #weaponRanges > maxNumRanges do
+--[[         while #weaponRanges > maxNumRanges do
             remove(weaponRanges)  -- default removes from end (shortest)
-          end
+        end ]]
     end
-    --Echo("weaponRanges to draw: " .. #weaponRanges)
 
     glDepthTest(false)
     glCulling(GLBACK)
@@ -199,52 +210,52 @@ function widget:DrawWorldPreUnit()
         local x, y, z = GetUnitPosition(unitID)
         if not x or not y or not z then break end
 
-        local dist = sqrt((x - camX) ^ 2 + (y - camY) ^ 2 + (z - camZ) ^ 2)
+        -- this is expensive let's not do this
+        --local dist = sqrt((x - camX) ^ 2 + (y - camY) ^ 2 + (z - camZ) ^ 2)
 
-        if dist < maxDrawDistance then
-            glPushMatrix()
-            glBlending ("alpha")
+        glPushMatrix()
+        glBlending ("alpha")
 
-            c = range / 600   -- some reduction to saturation based on range and num units selected
-            c = c / (#weaponRanges * 0.15) * weaponRange.factor
-            c = c > 1 and 1 or c
-            c = c < 0.15 and 0.15 or c
-            local cColor = {1, 1, 1, 0.5}
-            if colorMode == 0 then
-                cColor = {1, 1, 1, c*alpha}
-            elseif colorMode == 1 then
-                cColor = {0.7, 0.3, 0.3, c*alpha}
-            elseif colorMode == 2 then
-                cColor = {0.3, 0.7, 0.3, c*alpha}
-            elseif colorMode == 3 then
-                cColor = {0.3, 0.3, 0.7, c*alpha}
-            end
-
-            -- display modes: 0 - empty circles, 1 - filled circles, 2 - combined
-            -- draw empty circle
-            if displayMode ~= 0 then
-                glColor(cColor[1], cColor[2], cColor[3], alpha * 1.5)
-                glLineWidth(3)
-                glDrawGroundCircle(x, y, z, range, 32)
-            end
-
-            -- draw filled circle
-            if displayMode ~= 1 then
-                glTranslate(x, y, z)
-                glColor(cColor[1], cColor[2], cColor[3], cColor[4])
-                glBeginEnd(GLTRIANGLE_FAN, function()
-                local numSegments = 32
-                local angleStep = (2 * pi) / numSegments
-                for i = 0, numSegments do
-                    local angle = i * angleStep
-                    glVertex(sin(angle) * range, 0, cos(angle) * range)
-                end
-                end)
-            end
-            glBlending ("reset")
-            glPopMatrix()
+        c = range / 600   -- some reduction to saturation based on range and num units selected
+        c = c / (#weaponRanges * 0.15) * weaponRange.factor
+        c = c > 1 and 1 or c
+        c = c < 0.15 and 0.15 or c
+        local cColor = {1, 1, 1, 0.5}
+        if colorMode == 0 then
+            cColor = {1, 1, 1, c*alpha}
+        elseif colorMode == 1 then
+            cColor = {0.7, 0.3, 0.3, c*alpha}
+        elseif colorMode == 2 then
+            cColor = {0.3, 0.7, 0.3, c*alpha}
+        elseif colorMode == 3 then
+            cColor = {0.3, 0.3, 0.7, c*alpha}
         end
+
+        -- display modes: 0 - empty circles, 1 - filled circles, 2 - combined
+        -- draw empty circle
+        if displayMode ~= 0 then
+            glColor(cColor[1], cColor[2], cColor[3], alpha * 1.5)
+            glLineWidth(3)
+            glDrawGroundCircle(x, y, z, range, 32)
+        end
+
+        -- draw filled circle
+        if displayMode ~= 1 then
+            glTranslate(x, y, z)
+            glColor(cColor[1], cColor[2], cColor[3], cColor[4])
+            glBeginEnd(GLTRIANGLE_FAN, function()
+            local numSegments = 32
+            local angleStep = (2 * pi) / numSegments
+            for i = 0, numSegments do
+                local angle = i * angleStep
+                glVertex(sin(angle) * range, 0, cos(angle) * range)
+            end
+            end)
+        end
+        glBlending ("reset")
+        glPopMatrix()
     end
+
     glDepthTest(true)
 end
 
