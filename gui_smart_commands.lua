@@ -167,7 +167,7 @@ function widget:UnitCommand(unitID, unitDefID, unitTeam, cmdID, cmdParams, cmdOp
     if mouseClicked and cmdID > 0 then
         active = false
         --echo("not active")
-        echo("UnitCommand set0")
+        --echo("UnitCommand set0")
         SetActiveCommand(0)
     end
 end
