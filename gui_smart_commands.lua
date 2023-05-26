@@ -21,16 +21,30 @@ end
 --------------------------------------------------------------------------------------------
 local insert_mode = false
 
-local retain_aiming = false
 local enabled = true
 local selectedUnits = {}
 local active = false
 local mouseClicked = false
+local metaDown = false
 
+-- shortcuts
 local echo = Spring.Echo
+local GetActiveCommand = Spring.GetActiveCommand
+local GetFeaturePosition = Spring.GetFeaturePosition
+local GetModKeyState = Spring.GetModKeyState
+local GetInvertQueueKey = Spring.GetInvertQueueKey
+local GetMouseState = Spring.GetMouseState
+local GiveOrderToUnitArray = Spring.GiveOrderToUnitArray
+local SetActiveCommand = Spring.SetActiveCommand
+local TraceScreenRay = Spring.TraceScreenRay
 
-local skipFeatureCmd = {    -- pending more 
+local skipFeatureCmd = {    -- these cannot be set on featureID
     [CMD.ATTACK]=true, [CMD.PATROL]=true, [CMD.FIGHT]=true, [CMD.MANUALFIRE]=true
+}
+
+local skipAltogether = {
+    [10010]=true,   -- CMD_BUILD
+    [30100]=true,   -- CMD_AREA_MEX
 }
 
 function widget:Initialize()
@@ -60,11 +74,15 @@ function widget:KeyPress(key, mods, isRepeat)
     if key == 8 and mods.alt then   -- alt+backspace
         toggle()
     end
+    if not enabled then return false end
     if key == 105 and mods.alt then  -- alt+'i'
         insertMode()
     end
 
-    if not enabled then return false end
+    if mods.meta then 
+        --echo("meta down")
+        metaDown = true 
+    end
 
     if mouseClicked and not isRepeat then 
         mouseClicked = false 
@@ -77,19 +95,27 @@ end
 
 function widget:KeyRelease(key)
     if not enabled then return false end
+    if key == 122 or key == 120 or key == 118 or key == 99 then return false end -- z x c v keys, hardcoded for now...
 
+    local alt, ctrl, meta, shift = GetModKeys()
+    
+    local cmdIndex, cmdID, cmdType, cmdName = GetActiveCommand()
     if active and mouseClicked then
         mouseClicked = false 
         --echo("mouseClicked false")
-        if not retain_aiming then
-            Spring.SetActiveCommand(0)
+        if cmdID and cmdID > 0 and not skipAltogether[cmdID] then
+            SetActiveCommand(0)
         end
         return
     end
-    local cmdIndex, cmdID, cmdType, cmdName = Spring.GetActiveCommand()
-    if cmdID ~= nil and cmdID > 0 then  -- skip build commands
+
+    if active and cmdID ~= nil and cmdID > 0 and not skipAltogether[cmdID] then  -- skip build commands
         executeCommand(cmdID)
         active = false
+    end
+    if not meta then 
+        --echo("meta up")
+        metaDown = false 
     end
 end
 
@@ -102,8 +128,8 @@ end
 function executeCommand(cmdID)
     if not enabled then return false end
 
-    local mouseX, mouseY = Spring.GetMouseState()
-    local desc, args = Spring.TraceScreenRay(mouseX, mouseY, false)
+    local mouseX, mouseY = GetMouseState()
+    local desc, args = TraceScreenRay(mouseX, mouseY, false)
     if desc == nil then 
         return 
     end
@@ -114,7 +140,7 @@ function executeCommand(cmdID)
     elseif desc == "feature" then
         params = {args+32000} -- seriously wtf
         if skipFeatureCmd[cmdID] then
-            local fx, fy, fz = Spring.GetFeaturePosition(args, true)
+            local fx, fy, fz = GetFeaturePosition(args, true)
             params = {fx, fy, fz}
         end
     else
@@ -123,33 +149,33 @@ function executeCommand(cmdID)
     local alt, ctrl, meta, shift = GetModKeys()
     local cmdOpts
     local altOpts = GetCmdOpts(true, false, false, false, false)
-    if insert_mode and cmdID ~= 34923 then meta = not meta end -- insert doesn't play nice with set_target
-    if meta then
+    if insert_mode and cmdID ~= 34923 then meta = false end -- insert doesn't play nice with set_target
+    if metaDown then
         cmdOpts = GetCmdOpts(alt, ctrl, false, shift, false)
-        Spring.GiveOrderToUnitArray(selectedUnits, CMD.INSERT, {0, cmdID, cmdOpts.coded, unpack(params)}, altOpts)
+        GiveOrderToUnitArray(selectedUnits, CMD.INSERT, {0, cmdID, cmdOpts.coded, unpack(params)}, altOpts)
     else
         cmdOpts = GetCmdOpts(alt, ctrl, meta, shift, false)
-        Spring.GiveOrderToUnitArray(selectedUnits, cmdID, params, cmdOpts)
+        GiveOrderToUnitArray(selectedUnits, cmdID, params, cmdOpts)
     end
-    if not retain_aiming then
-        Spring.SetActiveCommand(0)
-    end
+    -- echo("executeCommand set0")
+    SetActiveCommand(0)
 end
 
 function widget:UnitCommand(unitID, unitDefID, unitTeam, cmdID, cmdParams, cmdOpts, cmdTag)
     if not enabled then return false end
 
-    if mouseClicked then
+    if mouseClicked and cmdID > 0 then
         active = false
         --echo("not active")
-        Spring.SetActiveCommand(0)
+        echo("UnitCommand set0")
+        SetActiveCommand(0)
     end
 end
 
 function GetModKeys()
-    local alt, ctrl, meta, shift = Spring.GetModKeyState()
+    local alt, ctrl, meta, shift = GetModKeyState()
   
-    if Spring.GetInvertQueueKey() then -- Shift inversion
+    if GetInvertQueueKey() then -- Shift inversion
         shift = not shift
     end
   
