@@ -170,13 +170,10 @@ function executeCommand(cmdID)
     SetActiveCommand(0)
 end
 
-function widget:UnitCommand(unitID, unitDefID, unitTeam, cmdID, cmdParams, cmdOpts, cmdTag)
+function widget:CommandNotify(id, cmdParams, cmdOpts)
     if not enabled then return false end
 
-    if active and mouseClicked and cmdID > 0 then
-        active = false
-        --echo("not active")
-        --echo("UnitCommand set0")
+    if active and id > 0 then
         SetActiveCommand(0)
     end
 end
