@@ -55,6 +55,37 @@ for unitDefID, unitDef in pairs(UnitDefs) do
 	end
 end
 
+-- speed up
+local Echo = Spring.Echo
+local GetSelectedUnits = Spring.GetSelectedUnits
+local GetUnitWeaponState = Spring.GetUnitWeaponState
+local GetUnitDefID = Spring.GetUnitDefID
+local GetCameraPosition = Spring.GetCameraPosition
+local GetUnitPosition = Spring.GetUnitPosition
+
+local glDepthTest = gl.DepthTest
+local glBlending = gl.Blending
+local glColor = gl.Color
+local glCulling = gl.Culling
+local glBeginEnd = gl.BeginEnd
+local glDrawGroundCircle = gl.DrawGroundCircle
+local glLineWidth = gl.LineWidth
+local glPopMatrix = gl.PopMatrix
+local glPushMatrix = gl.PushMatrix
+local glTranslate = gl.Translate
+local glVertex = gl.Vertex
+local GLTRIANGLE_FAN = GL.TRIANGLE_FAN
+local GLBACK = GL.BACK
+
+local sqrt = math.sqrt
+local sin = math.sin
+local cos = math.cos
+local pi = math.pi
+
+local insert = table.insert
+local remove = table.remove
+local sort = table.sort
+
 -- Initialize the widget
 function widget:Initialize()
     selectedUnits = {}
@@ -78,17 +109,17 @@ end
 
 function toggleRange(_, _, args)
     toggle = not toggle
-    Spring.Echo("Weapon range toggled on: " .. tostring(toggle))
+    Echo("Weapon range toggled on: " .. tostring(toggle))
 end
 
 function cycleColorMode(_, _, args)
     colorMode = (colorMode + 1) % 4
-    Spring.Echo("Weapon range color switched to: " .. colorModeNames[colorMode+1])
+    Echo("Weapon range color switched to: " .. colorModeNames[colorMode+1])
 end
 
 function cycleDisplayMode(_, _, args)
     displayMode = (displayMode + 1) % 3
-    Spring.Echo("Weapon range display mode switched to: " .. displayMode)
+    Echo("Weapon range display mode switched to: " .. displayMode)
 end
 
 function widget:KeyPress(key, mods, isRepeat)
@@ -113,13 +144,13 @@ function widget:Update(dt)
 
     delaySec = 0
     selChanged = false
-    selectedUnits = Spring.GetSelectedUnits()
-    --Spring.Echo("units selected: " .. #selectedUnits)
+    selectedUnits = GetSelectedUnits()
+    --Echo("units selected: " .. #selectedUnits)
     weaponRanges = {}
 
     -- Loop through each selected unit and get its weapon ranges
     for i, unitID in ipairs(selectedUnits) do
-        --local weaponRange = Spring.GetUnitWeaponState(unitID, 1, "range")
+        --local weaponRange = GetUnitWeaponState(unitID, 1, "range")
         local unitDef = GetUnitDef(unitID)
         if unitDef then
             local weaponRange = nil
@@ -132,13 +163,13 @@ function widget:Update(dt)
 
             if weaponRange then
                 if isCommander[unitDef.id] then -- let's also add dgun range
-                    local dgunRange = Spring.GetUnitWeaponState(unitID, 3, "range")
+                    local dgunRange = GetUnitWeaponState(unitID, 3, "range")
                     local fireRange = unitDef.maxWeaponRange
-                    table.insert(weaponRanges, {unitID = unitID, range = weaponRange, factor = 50})
-                    table.insert(weaponRanges, {unitID = unitID, range = dgunRange, factor = 50})
-                    table.insert(weaponRanges, {unitID = unitID, range = fireRange, factor = 50})
+                    insert(weaponRanges, {unitID = unitID, range = weaponRange, factor = 50})
+                    insert(weaponRanges, {unitID = unitID, range = dgunRange, factor = 50})
+                    insert(weaponRanges, {unitID = unitID, range = fireRange, factor = 50})
                 else
-                    table.insert(weaponRanges, {unitID = unitID, range = weaponRange, factor = 1})
+                    insert(weaponRanges, {unitID = unitID, range = weaponRange, factor = 1})
                 end
             end
 
@@ -151,28 +182,28 @@ function widget:DrawWorldPreUnit()
     if not selectedUnits or not weaponRanges or not toggle then return end
     if #weaponRanges > maxNumRanges then   -- too many ranges to render
         -- let's sort by range, high to low
-        table.sort(weaponRanges, function(a, b) return a.range > b.range end)
+        sort(weaponRanges, function(a, b) return a.range > b.range end)
         while #weaponRanges > maxNumRanges do
-            table.remove(weaponRanges)  -- default removes from end (shortest)
+            remove(weaponRanges)  -- default removes from end (shortest)
           end
     end
-    --Spring.Echo("weaponRanges to draw: " .. #weaponRanges)
+    --Echo("weaponRanges to draw: " .. #weaponRanges)
 
-    gl.DepthTest(false)
-    gl.Culling(GL.BACK)
+    glDepthTest(false)
+    glCulling(GLBACK)
 
-    local camX, camY, camZ = Spring.GetCameraPosition()
+    local camX, camY, camZ = GetCameraPosition()
     for i, weaponRange in ipairs(weaponRanges) do
         local unitID = weaponRange.unitID
         local range = weaponRange.range
-        local x, y, z = Spring.GetUnitPosition(unitID)
+        local x, y, z = GetUnitPosition(unitID)
         if not x or not y or not z then break end
 
-        local dist = math.sqrt((x - camX) ^ 2 + (y - camY) ^ 2 + (z - camZ) ^ 2)
+        local dist = sqrt((x - camX) ^ 2 + (y - camY) ^ 2 + (z - camZ) ^ 2)
 
         if dist < maxDrawDistance then
-            gl.PushMatrix()
-            gl.Blending ("alpha")
+            glPushMatrix()
+            glBlending ("alpha")
 
             c = range / 600   -- some reduction to saturation based on range and num units selected
             c = c / (#weaponRanges * 0.15) * weaponRange.factor
@@ -192,38 +223,36 @@ function widget:DrawWorldPreUnit()
             -- display modes: 0 - empty circles, 1 - filled circles, 2 - combined
             -- draw empty circle
             if displayMode ~= 0 then
-                gl.Color(cColor[1], cColor[2], cColor[3], alpha * 1.5)
-                gl.LineWidth(3)
-                gl.DrawGroundCircle(x, y, z, range, 32)
+                glColor(cColor[1], cColor[2], cColor[3], alpha * 1.5)
+                glLineWidth(3)
+                glDrawGroundCircle(x, y, z, range, 32)
             end
 
             -- draw filled circle
             if displayMode ~= 1 then
-                gl.Translate(x, y, z)
-                gl.Color(cColor[1], cColor[2], cColor[3], cColor[4])
-                gl.BeginEnd(GL.TRIANGLE_FAN, function()
+                glTranslate(x, y, z)
+                glColor(cColor[1], cColor[2], cColor[3], cColor[4])
+                glBeginEnd(GLTRIANGLE_FAN, function()
                 local numSegments = 32
-                local angleStep = (2 * math.pi) / numSegments
+                local angleStep = (2 * pi) / numSegments
                 for i = 0, numSegments do
                     local angle = i * angleStep
-                    gl.Vertex(math.sin(angle) * range, 0, math.cos(angle) * range)
+                    glVertex(sin(angle) * range, 0, cos(angle) * range)
                 end
                 end)
             end
-            gl.Blending ("reset")
-            gl.PopMatrix()
+            glBlending ("reset")
+            glPopMatrix()
         end
     end
-    gl.DepthTest(true)
+    glDepthTest(true)
 end
 
 function GetUnitDef(unitID)
-    local unitDefID = Spring.GetUnitDefID(unitID)
+    local unitDefID = GetUnitDefID(unitID)
     if unitDefID then
         local unitDef = UnitDefs[unitDefID]
         return unitDef
     end
     return nil
 end
-
-
