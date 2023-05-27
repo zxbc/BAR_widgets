@@ -113,9 +113,22 @@ for _, binding in pairs(keyBindings) do
     local key = binding["boundWith"]
     local cmd = binding["command"]
     if key and cmd then
-        keyToBinding[key] = cmd
+        if keyToBinding[key] == nil then keyToBinding[key] = cmd
+        else
+            -- if there's clash, we need to add to existing
+            local value = keyToBinding[key]
+            if type(value) == "table" then  -- already more than one entry
+                value[#value+1] = cmd
+                keyToBinding[key] = value
+            elseif type(value) == "string" then  -- one entry only
+                local newValue = {value, cmd}
+                keyToBinding[key] = newValue
+            end
+        end
     end
 end
+
+table.save(keyToBinding, "LuaUI/config/keyToBinding.txt", "Smart Commands")
 
 local skipFeatureCmd = {    -- these cannot be set on featureID
     [CMD.ATTACK]=true, [CMD.PATROL]=true, [CMD.FIGHT]=true, [CMD.MANUALFIRE]=true
@@ -159,8 +172,18 @@ function widget:KeyPress(key, mods, isRepeat)
             --echo("keyString: "..keyString..", cmdName: "..tostring(cmdName))
             if cmdName then
                 --if (cmdID and cmdID < 0) or (cmdID and skipAltogether[cmdID]) then return false end
-                echo("command set through keybind search")
-                SetActiveCommand(cmdName)
+                echo("command set through keybind search: "..tableToString(cmdName))
+                if type(cmdName) == "table" then -- we have multiple commands possible
+                    local cmd, result
+                    for i=1, #cmdName do
+                        cmd = cmdName[i]
+                        result = SetActiveCommand(cmd)
+                        if result then break end
+                    end
+                    if not result then echo("Error in finding bound command!") end
+                elseif type(cmdName) == "string" then -- only one command bound
+                    SetActiveCommand(cmdName)
+                end
                 active = true
                 --echo("active")
             end
