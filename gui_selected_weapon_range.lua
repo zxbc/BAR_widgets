@@ -239,18 +239,19 @@ function widget:DrawWorldPreUnit()
             glDrawGroundCircle(x, y, z, range, 32)
         end
 
+        local function drawCircle()
+            local numSegments = 32
+            local angleStep = (2 * pi) / numSegments
+            for i = 0, numSegments do
+                local angle = i * angleStep
+                glVertex(sin(angle) * range, 0, cos(angle) * range)
+            end
+        end
+
         -- draw filled circle
         if displayMode ~= 1 then
             glTranslate(x, y, z)
             glColor(cColor[1], cColor[2], cColor[3], cColor[4])
-            local function drawCircle()
-                local numSegments = 32
-                local angleStep = (2 * pi) / numSegments
-                for i = 0, numSegments do
-                    local angle = i * angleStep
-                    glVertex(sin(angle) * range, 0, cos(angle) * range)
-                end
-            end
             glBeginEnd(GLTRIANGLE_FAN, drawCircle)
         end
         glBlending ("reset")
