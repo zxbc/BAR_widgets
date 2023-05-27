@@ -151,7 +151,7 @@ function toggle(_,_,args)
 end
 
 function widget:MousePress(x, y, button)
-    if not enabled then return false end
+    if not enabled or #selectedUnits == 0 then return false end
 
     mouseClicked = true
     --echo("mouse clicked TRUE")
@@ -161,7 +161,7 @@ function widget:KeyPress(key, mods, isRepeat)
     if key == 8 and mods.alt then   -- alt+backspace
         toggle()
     end
-    if not enabled then return false end
+    if not enabled or #selectedUnits == 0 then return false end
 
     if mods.meta then
         metaDown = true 
@@ -171,8 +171,7 @@ function widget:KeyPress(key, mods, isRepeat)
             local cmdName = keyToBinding[keyString]
             --echo("keyString: "..keyString..", cmdName: "..tostring(cmdName))
             if cmdName then
-                --if (cmdID and cmdID < 0) or (cmdID and skipAltogether[cmdID]) then return false end
-                echo("command set through keybind search: "..tableToString(cmdName))
+                --echo("command set through keybind search: "..tableToString(cmdName))
                 if type(cmdName) == "table" then -- we have multiple commands possible
                     local cmd, result
                     for i=1, #cmdName do
@@ -200,22 +199,17 @@ function widget:KeyPress(key, mods, isRepeat)
         shiftDown = true
     end
 
-    -- Iterate through the key bindings and check if the pressed key matches any of the bindings
-
-
-
     if mouseClicked and not isRepeat then 
         mouseClicked = false 
         --echo("mouse clicked FALSE")
     end
     active = true
-    --local cmdIndex, cmdID, cmdType, cmdName = GetActiveCommand()
 
     return false
 end
 
 function widget:KeyRelease(key)
-    if not enabled then return false end
+    if not enabled or #selectedUnits == 0 then return false end
     if key == 122 or key == 120 or key == 118 or key == 99 then return false end -- z x c v keys, hardcoded for now...
 
     local alt, ctrl, meta, shift = GetModKeys()
@@ -240,6 +234,35 @@ function widget:KeyRelease(key)
         end
         return
     end
+    --echo("cmdIndex: "..tostring(cmdIndex).." cmdID: "..tostring(cmdID).." cmdType: "..tostring(cmdType).." cmdName: "..tostring(cmdName))
+
+    -- if GetActiveCommand returns nothing, it could still be settarget, we need to check keyBindings
+    -- are there other commands that also don't get returned by GetActiveCommand?
+    if nil == cmdID then
+        local keyString = GetKeySymbol(key)
+        if keyString then 
+            local keyString = "sc_"..keyString
+            local cmdName = keyToBinding[keyString]
+            --echo("keyString: "..keyString..", cmdName: "..tostring(cmdName))
+            if cmdName then
+                --echo("command set through keybind search: "..tableToString(cmdName))
+                if type(cmdName) == "table" then -- we have multiple commands possible
+                    local cmd, result
+                    for i=1, #cmdName do
+                        cmd = cmdName[i]
+                        result = SetActiveCommand(cmd)
+                        if result then break end
+                    end
+                    if not result then echo("Error in finding bound command!") end
+                elseif type(cmdName) == "string" then -- only one command bound
+                    SetActiveCommand(cmdName)
+                end
+                active = true
+                --echo("active")
+            end
+        end
+        cmdIndex, cmdID, cmdType, cmdName = GetActiveCommand()
+    end
 
     if active and cmdID ~= nil and cmdID > 0 and not skipAltogether[cmdID] then  -- skip build commands
         executeCommand(cmdID)
@@ -255,7 +278,7 @@ function widget:SelectionChanged(sel)
 end
 
 function executeCommand(cmdID)
-    if not enabled then return false end
+    if not enabled or #selectedUnits == 0 then return false end
 
     local mouseX, mouseY = GetMouseState()
     local desc, args = TraceScreenRay(mouseX, mouseY, false)
@@ -282,11 +305,14 @@ function executeCommand(cmdID)
     local alt, ctrl, meta, shift = GetModKeys()
     local cmdOpts
     local altOpts = GetCmdOpts(true, false, false, false, false)
+
+
     if cmdID ~= 34923 then meta = false end -- insert doesn't play nice with set_target
     if metaDown then
         cmdOpts = GetCmdOpts(alt, ctrl, false, shift, false)
         GiveOrderToUnitArray(selectedUnits, CMD.INSERT, {0, cmdID, cmdOpts.coded, unpack(params)}, altOpts)
     else
+        --echo("cmdID: ".. tostring(cmdID)..", opts: ".. tableToString(cmdOpts))
         cmdOpts = GetCmdOpts(alt, ctrl, meta, shift, false)
         GiveOrderToUnitArray(selectedUnits, cmdID, params, cmdOpts)
     end
@@ -295,7 +321,7 @@ function executeCommand(cmdID)
 end
 
 function widget:CommandNotify(id, cmdParams, cmdOpts)
-    if not enabled then return false end
+    if not enabled or #selectedUnits == 0 then return false end
 
     if active and id > 0 then
         SetActiveCommand(0)
