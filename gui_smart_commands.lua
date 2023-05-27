@@ -157,15 +157,8 @@ function widget:MousePress(x, y, button)
     --echo("mouse clicked TRUE")
 end
 
-function widget:KeyPress(key, mods, isRepeat)
-    if key == 8 and mods.alt then   -- alt+backspace
-        toggle()
-    end
-    if not enabled or #selectedUnits == 0 then return false end
-
-    if mods.meta then
-        metaDown = true 
-        local keyString = GetKeySymbol(key)
+local function setActiveCmdFromKey(key)
+    local keyString = GetKeySymbol(key)
         if keyString then 
             local keyString = "sc_"..keyString
             local cmdName = keyToBinding[keyString]
@@ -187,6 +180,17 @@ function widget:KeyPress(key, mods, isRepeat)
                 --echo("active")
             end
         end
+end
+
+function widget:KeyPress(key, mods, isRepeat)
+    if key == 8 and mods.alt then   -- alt+backspace
+        toggle()
+    end
+    if not enabled or #selectedUnits == 0 then return false end
+
+    if mods.meta then
+        metaDown = true 
+        setActiveCmdFromKey(key)
     end
 
     if key == 32 then 
@@ -236,31 +240,10 @@ function widget:KeyRelease(key)
     end
     --echo("cmdIndex: "..tostring(cmdIndex).." cmdID: "..tostring(cmdID).." cmdType: "..tostring(cmdType).." cmdName: "..tostring(cmdName))
 
-    -- if GetActiveCommand returns nothing, it could still be settarget, we need to check keyBindings
+    -- if GetActiveCommand returns nothing, it could still be shift+settarget, we need to check keyBindings
     -- are there other commands that also don't get returned by GetActiveCommand?
     if nil == cmdID then
-        local keyString = GetKeySymbol(key)
-        if keyString then 
-            local keyString = "sc_"..keyString
-            local cmdName = keyToBinding[keyString]
-            --echo("keyString: "..keyString..", cmdName: "..tostring(cmdName))
-            if cmdName then
-                --echo("command set through keybind search: "..tableToString(cmdName))
-                if type(cmdName) == "table" then -- we have multiple commands possible
-                    local cmd, result
-                    for i=1, #cmdName do
-                        cmd = cmdName[i]
-                        result = SetActiveCommand(cmd)
-                        if result then break end
-                    end
-                    if not result then echo("Error in finding bound command!") end
-                elseif type(cmdName) == "string" then -- only one command bound
-                    SetActiveCommand(cmdName)
-                end
-                active = true
-                --echo("active")
-            end
-        end
+        setActiveCmdFromKey(key)
         cmdIndex, cmdID, cmdType, cmdName = GetActiveCommand()
     end
 
