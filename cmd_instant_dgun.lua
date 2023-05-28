@@ -13,7 +13,9 @@ end
 
 --------------------------------------------------------------------------------
 -- Set custom_keybind_mode to false to use default 'd' keybind
--- Custom keybind action name: instant_dgun
+-- Custom keybind action names: (YOU MUST BIND BOTH ACTIONS TO THE SAME KEY)
+--                             instant_dgun_press
+--                             instant_dgun_release
 -- Set retain_aiming to true if you want the dgun aim to stay up after firing
 --------------------------------------------------------------------------------
 local custom_keybind_mode = false
