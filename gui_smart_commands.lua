@@ -127,7 +127,7 @@ for _, binding in pairs(keyBindings) do
     end
 end
 
-table.save(keyToBinding, "LuaUI/config/keyToBinding.txt", "Smart Commands")
+--table.save(keyToBinding, "LuaUI/config/keyToBinding.txt", "Smart Commands")
 
 local skipFeatureCmd = {    -- these cannot be set on featureID
     [CMD.ATTACK]=true, [CMD.PATROL]=true, [CMD.FIGHT]=true, [CMD.MANUALFIRE]=true
