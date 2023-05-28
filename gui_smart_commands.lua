@@ -165,7 +165,7 @@ local function setActiveCmdFromKey(key)
         if curMods and curMods.ctrl then modString = "Ctrl+" end
         if curMods and curMods.alt then modString = "Alt+" end
         keyString = modString .. keyString
-        echo("keyString: "..keyString)
+        --echo("keyString: "..keyString)
         local cmdName = keyToBinding[keyString]
         --echo("keyString: "..keyString..", cmdName: "..tostring(cmdName))
         if cmdName then
