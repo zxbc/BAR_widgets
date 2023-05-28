@@ -22,8 +22,7 @@ local enabled = true
 local selectedUnits = {}
 local active = false
 local mouseClicked = false
-local metaDown = false
-local shiftDown = true
+local curMods = {}   -- {alt, ctrl, meta, shift}
 
 -- shortcuts
 local echo = Spring.Echo
@@ -158,28 +157,35 @@ function widget:MousePress(x, y, button)
 end
 
 local function setActiveCmdFromKey(key)
+    local result = false
     local keyString = GetKeySymbol(key)
-        if keyString then 
-            local keyString = "sc_"..keyString
-            local cmdName = keyToBinding[keyString]
-            --echo("keyString: "..keyString..", cmdName: "..tostring(cmdName))
-            if cmdName then
-                --echo("command set through keybind search: "..tableToString(cmdName))
-                if type(cmdName) == "table" then -- we have multiple commands possible
-                    local cmd, result
-                    for i=1, #cmdName do
-                        cmd = cmdName[i]
-                        result = SetActiveCommand(cmd)
-                        if result then break end
-                    end
-                    if not result then echo("Error in finding bound command!") end
-                elseif type(cmdName) == "string" then -- only one command bound
-                    SetActiveCommand(cmdName)
+    if keyString then 
+        local keyString = "sc_"..keyString
+        local modString = ""
+        if curMods and curMods.ctrl then modString = "Ctrl+" end
+        if curMods and curMods.alt then modString = "Alt+" end
+        keyString = modString .. keyString
+        echo("keyString: "..keyString)
+        local cmdName = keyToBinding[keyString]
+        --echo("keyString: "..keyString..", cmdName: "..tostring(cmdName))
+        if cmdName then
+            --echo("command set through keybind search: "..tableToString(cmdName))
+            if type(cmdName) == "table" then -- we have multiple commands possible
+                local cmd
+                for i=1, #cmdName do
+                    cmd = cmdName[i]
+                    result = SetActiveCommand(cmd)
+                    if result then break end
                 end
-                active = true
-                --echo("active")
+                if not result then echo("Error in finding bound command!") end
+            elseif type(cmdName) == "string" then -- only one command bound
+                result = SetActiveCommand(cmdName)
             end
+            active = true
+            --echo("active")
         end
+    end
+    return result
 end
 
 function widget:KeyPress(key, mods, isRepeat)
@@ -188,26 +194,21 @@ function widget:KeyPress(key, mods, isRepeat)
     end
     if not enabled or #selectedUnits == 0 then return false end
 
-    if mods.meta then
-        metaDown = true 
-        setActiveCmdFromKey(key)
-    end
+    --echo("key = " .. tostring(key))
 
-    if key == 32 then 
-        ---echo("meta down")
-        metaDown = true 
-    end
-
-    if key == 304 then
-        --echo("shift down")
-        shiftDown = true
+    curMods = mods
+    if key == 32 or key == 304 or key == 306 or key == 308 then 
+        --echo("mod key only! ".. tostring(key))
+        return false 
     end
 
     if mouseClicked and not isRepeat then 
         mouseClicked = false 
         --echo("mouse clicked FALSE")
     end
-    active = true
+    active = setActiveCmdFromKey(key, mods, isRepeat)
+
+    --active = true
 
     return false
 end
@@ -217,17 +218,10 @@ function widget:KeyRelease(key)
     if key == 122 or key == 120 or key == 118 or key == 99 then return false end -- z x c v keys, hardcoded for now...
 
     local alt, ctrl, meta, shift = GetModKeys()
-
-    if key == 304 then
-        --echo("shift up")
-        shiftDown = false 
-        return
-    end
-    if key == 32 then 
-        --echo("meta up")
-        metaDown = false 
-        return
-    end
+    curMods.alt = alt
+    curMods.ctrl = ctrl
+    curMods.meta = meta
+    curMods.shift = shift
     
     local cmdIndex, cmdID, cmdType, cmdName = GetActiveCommand()
     if active and mouseClicked then
@@ -243,8 +237,10 @@ function widget:KeyRelease(key)
     -- if GetActiveCommand returns nothing, it could still be shift+settarget, we need to check keyBindings
     -- are there other commands that also don't get returned by GetActiveCommand?
     if nil == cmdID then
-        setActiveCmdFromKey(key)
-        cmdIndex, cmdID, cmdType, cmdName = GetActiveCommand()
+        local result = setActiveCmdFromKey(key)
+        if result then
+            _, cmdID, _, _ = GetActiveCommand()
+        end
     end
 
     if active and cmdID ~= nil and cmdID > 0 and not skipAltogether[cmdID] then  -- skip build commands
@@ -285,20 +281,24 @@ function executeCommand(cmdID)
     else
         params = {args[1], args[2], args[3]}
     end
-    local alt, ctrl, meta, shift = GetModKeys()
+    --local alt, ctrl, meta, shift = GetModKeys()
     local cmdOpts
     local altOpts = GetCmdOpts(true, false, false, false, false)
 
 
-    if cmdID ~= 34923 then meta = false end -- insert doesn't play nice with set_target
-    if metaDown then
-        cmdOpts = GetCmdOpts(alt, ctrl, false, shift, false)
+ 
+    if curMods.meta and (cmdID ~= 34923 and cmdID ~= 34925) then
+        cmdOpts = GetCmdOpts(curMods.alt, curMods.ctrl, false, curMods.shift, false)
         GiveOrderToUnitArray(selectedUnits, CMD.INSERT, {0, cmdID, cmdOpts.coded, unpack(params)}, altOpts)
     else
-        --echo("cmdID: ".. tostring(cmdID)..", opts: ".. tableToString(cmdOpts))
-        cmdOpts = GetCmdOpts(alt, ctrl, meta, shift, false)
+        if cmdID == 34923 or cmdID == 34925 then  -- insert doesn't play nice with set_target
+            curMods.meta = false
+        end
+
+        cmdOpts = GetCmdOpts(curMods.alt, curMods.ctrl, curMods.meta, curMods.shift, false)
         GiveOrderToUnitArray(selectedUnits, cmdID, params, cmdOpts)
     end
+    --echo("cmdID: ".. tostring(cmdID)..", opts: ".. tableToString(cmdOpts))
     -- echo("executeCommand set0")
     SetActiveCommand(0)
 end
