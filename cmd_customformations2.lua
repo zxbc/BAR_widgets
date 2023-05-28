@@ -49,7 +49,7 @@ local minHungarianUnits		= 10 -- If we kept reducing maxUnits it can get to a po
 local unitIncreaseThresh	= 0.85 -- We only increase maxUnits if the units are great enough for time to be meaningful
 
 -- Alpha loss per second after releasing mouse
-local lineFadeRate = 10.0
+local lineFadeRate = 2.0
 
 -- What commands are eligible for custom formations
 local CMD_SETTARGET = 34923
@@ -926,11 +926,12 @@ function GetOrdersNoX(nodes, units, unitCount, shifted)
         end
     end
 
+    local fminv = 1.0/ fm
     local function sortFunc(a, b)
         -- y = mx + c
         -- c = y - mx
         -- c = y + x / m (For perp line)
-        return (a[3] + a[1] / fm) < (b[3] + b[1] / fm)
+        return (a[3] + a[1] * fminv) < (b[3] + b[1] * fminv)
     end
 
     tsort(unitSet, sortFunc)
