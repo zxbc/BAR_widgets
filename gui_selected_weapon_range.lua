@@ -33,7 +33,7 @@ end
 -----------------------------------------------------------------------------------------
 
 local maxDrawDistance = 5000    -- Max camera distance at which to draw ranges of selected units (default 5000)
-local maxNumRanges = 100         -- Max number of ranges to display (default 100)
+local maxNumRanges = 80         -- Max number of ranges to display (default 100)
                                 -- If you select more than this number of units, only this many will be drawn, starting from highest ranges
 local alpha = 0.07              -- Alpha value for the drawing (default at 0.07)
                                 -- Remember circles overlap and become denser in color!
@@ -64,6 +64,7 @@ local GetUnitWeaponState = Spring.GetUnitWeaponState
 local GetUnitDefID = Spring.GetUnitDefID
 local GetCameraPosition = Spring.GetCameraPosition
 local GetUnitPosition = Spring.GetUnitPosition
+local GetCameraState = Spring.GetCameraState
 
 local glDepthTest = gl.DepthTest
 local glBlending = gl.Blending
@@ -87,6 +88,15 @@ local pi = math.pi
 local insert = table.insert
 local remove = table.remove
 local sort = table.sort
+
+local function GetUnitDef(unitID)
+    local unitDefID = GetUnitDefID(unitID)
+    if unitDefID then
+        local unitDef = UnitDefs[unitDefID]
+        return unitDef
+    end
+    return nil
+end
 
 -- Initialize the widget
 function widget:Initialize()
@@ -151,8 +161,10 @@ function widget:Update(dt)
     weaponRanges = {}
 
     -- Loop through each selected unit and get its weapon ranges
-    for i, unitID in ipairs(selectedUnits) do
+    local j = 1
+    for i=1, #selectedUnits do
         --local weaponRange = GetUnitWeaponState(unitID, 1, "range")
+        local unitID = selectedUnits[i]
         local unitDef = GetUnitDef(unitID)
         if unitDef then
             local weaponRange = nil
@@ -163,15 +175,18 @@ function widget:Update(dt)
                 weaponRange = unitDef.maxWeaponRange
             end
 
-            if weaponRange and (#weaponRanges < 50 or isCommander[unitDef.id]) then
+            -- Commander and units with very long range always get displayed
+            if weaponRange and (#weaponRanges < maxNumRanges or isCommander[unitDef.id] or weaponRange > 800) then
                 if isCommander[unitDef.id] then -- let's also add dgun range
                     local dgunRange = GetUnitWeaponState(unitID, 3, "range")
                     local fireRange = unitDef.maxWeaponRange
-                    insert(weaponRanges, {unitID = unitID, range = weaponRange, factor = 50})
-                    insert(weaponRanges, {unitID = unitID, range = dgunRange, factor = 50})
-                    insert(weaponRanges, {unitID = unitID, range = fireRange, factor = 50})
+                    weaponRanges[j] = {unitID = unitID, range = weaponRange, factor = 50}
+                    weaponRanges[j+1] = {unitID = unitID, range = dgunRange, factor = 50}
+                    weaponRanges[j+2] = {unitID = unitID, range = fireRange, factor = 50}
+                    j = j + 3
                 else
-                    insert(weaponRanges, {unitID = unitID, range = weaponRange, factor = 1})
+                    weaponRanges[j] = {unitID = unitID, range = weaponRange, factor = 1}
+                    j = j + 1
                 end
             end
 
@@ -184,7 +199,7 @@ function widget:DrawWorldPreUnit()
     if not selectedUnits or not weaponRanges or not toggle then return end
 
     local curHeight
-    local camState = Spring.GetCameraState()
+    local camState = GetCameraState()
     if (camState.name == "ta") then 
         curHeight = camState.height
     elseif (camState.name == "spring") then 
@@ -192,29 +207,25 @@ function widget:DrawWorldPreUnit()
     end
     if curHeight and curHeight > maxDrawDistance then return end
 
-    if #weaponRanges > maxNumRanges then   -- too many ranges to render
-        -- let's sort by range, high to low
-        sort(weaponRanges, function(a, b) return a.range > b.range end)
---[[         while #weaponRanges > maxNumRanges do
-            remove(weaponRanges)  -- default removes from end (shortest)
-        end ]]
-    end
+--[[     if #weaponRanges > maxNumRanges then   -- too many ranges to render
+        -- let's sort by range, long to short
+        local function longToShort()
+            return a.range > b.range
+        end
+        sort(weaponRanges, longToShort)
+    end ]]
 
     glDepthTest(false)
-    glCulling(GLBACK)
+    --glCulling(GLBACK)
+    glBlending ("alpha")
 
-    local camX, camY, camZ = GetCameraPosition()
     for i, weaponRange in ipairs(weaponRanges) do
         local unitID = weaponRange.unitID
         local range = weaponRange.range
         local x, y, z = GetUnitPosition(unitID)
         if not x or not y or not z then break end
 
-        -- this is expensive let's not do this
-        --local dist = sqrt((x - camX) ^ 2 + (y - camY) ^ 2 + (z - camZ) ^ 2)
-
         glPushMatrix()
-        glBlending ("alpha")
 
         c = range / 600   -- some reduction to saturation based on range and num units selected
         c = c / (#weaponRanges * 0.15) * weaponRange.factor
@@ -231,7 +242,7 @@ function widget:DrawWorldPreUnit()
             cColor = {0.3, 0.3, 0.7, c*alpha}
         end
 
-        -- display modes: 0 - empty circles, 1 - filled circles, 2 - combined
+        -- display modes: 0 - filled, 1 - empty, 2 - combined
         -- draw empty circle
         if displayMode ~= 0 then
             glColor(cColor[1], cColor[2], cColor[3], alpha * 1.5)
@@ -254,18 +265,9 @@ function widget:DrawWorldPreUnit()
             glColor(cColor[1], cColor[2], cColor[3], cColor[4])
             glBeginEnd(GLTRIANGLE_FAN, drawCircle)
         end
-        glBlending ("reset")
         glPopMatrix()
     end
-
+    glBlending ("reset")
     glDepthTest(true)
 end
 
-function GetUnitDef(unitID)
-    local unitDefID = GetUnitDefID(unitID)
-    if unitDefID then
-        local unitDef = UnitDefs[unitDefID]
-        return unitDef
-    end
-    return nil
-end
