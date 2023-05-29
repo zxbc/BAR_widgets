@@ -227,10 +227,10 @@ function widget:DrawWorldPreUnit()
 
         glPushMatrix()
 
-        c = range / 600   -- some reduction to saturation based on range and num units selected
-        c = c / (#weaponRanges * 0.15) * weaponRange.factor
+        c = range / 800   -- some reduction to saturation based on range and num units selected
+        c = c / (#weaponRanges * 0.22) * weaponRange.factor
         c = c > 1 and 1 or c
-        c = c < 0.15 and 0.15 or c
+        c = c < 0.1 and 0.1 or c
         local cColor = {1, 1, 1, 0.5}
         if colorMode == 0 then
             cColor = {1, 1, 1, c*alpha}
