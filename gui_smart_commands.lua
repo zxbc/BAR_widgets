@@ -138,6 +138,15 @@ local skipAltogether = {
     [30100]=true,   -- CMD_AREA_MEX
 }
 
+local isModKey = {
+    [32]=true, [304]=true, [306]=true, [308]=true
+}
+
+local isBuildKey = {
+    [122]=true, [120]=true, [118]=true, [99]=true
+}
+
+
 function widget:Initialize()
     selectedUnits = GetSelectedUnits()
     widgetHandler.actionHandler:AddAction(self, "gui_smart_commands_onoff_toggle", toggle, nil, "p")
@@ -154,6 +163,10 @@ function widget:MousePress(x, y, button)
 
     mouseClicked = true
     --echo("mouse clicked TRUE")
+end
+
+local function isChatActive()
+    return WG['chat'].isInputActive() or false
 end
 
 local function setActiveCmdFromKey(key)
@@ -177,7 +190,7 @@ local function setActiveCmdFromKey(key)
                     result = SetActiveCommand(cmd)
                     if result then break end
                 end
-                if not result then echo("Error in finding bound command!") end
+                --if not result then echo("Error in finding bound command!") end
             elseif type(cmdName) == "string" then -- only one command bound
                 result = SetActiveCommand(cmdName)
             end
@@ -193,11 +206,12 @@ function widget:KeyPress(key, mods, isRepeat)
         toggle()
     end
     if not enabled or #selectedUnits == 0 then return false end
+    if isChatActive() then return false end
 
     --echo("key = " .. tostring(key))
 
     curMods = mods
-    if key == 32 or key == 304 or key == 306 or key == 308 then 
+    if isModKey[key] then 
         --echo("mod key only! ".. tostring(key))
         return false 
     end
@@ -208,20 +222,21 @@ function widget:KeyPress(key, mods, isRepeat)
     end
     active = setActiveCmdFromKey(key, mods, isRepeat)
 
-    --active = true
-
     return false
 end
 
 function widget:KeyRelease(key)
     if not enabled or #selectedUnits == 0 then return false end
-    if key == 122 or key == 120 or key == 118 or key == 99 then return false end -- z x c v keys, hardcoded for now...
+    if isChatActive() then return false end
+    if isBuildKey[key] then return false end
 
     local alt, ctrl, meta, shift = GetModKeys()
     curMods.alt = alt
     curMods.ctrl = ctrl
     curMods.meta = meta
     curMods.shift = shift
+
+    if isModKey[key] then return false end
     
     local cmdIndex, cmdID, cmdType, cmdName = GetActiveCommand()
     if active and mouseClicked then
@@ -230,20 +245,21 @@ function widget:KeyRelease(key)
         if cmdID and cmdID > 0 and not skipAltogether[cmdID] then
             SetActiveCommand(0)
         end
-        return
+        return false
     end
     --echo("cmdIndex: "..tostring(cmdIndex).." cmdID: "..tostring(cmdID).." cmdType: "..tostring(cmdType).." cmdName: "..tostring(cmdName))
 
     -- if GetActiveCommand returns nothing, it could still be shift+settarget, we need to check keyBindings
     -- are there other commands that also don't get returned by GetActiveCommand?
-    if nil == cmdID then
+    -- not needed now with new method
+--[[     if nil == cmdID then
         local result = setActiveCmdFromKey(key)
         if result then
             _, cmdID, _, _ = GetActiveCommand()
         end
-    end
+    end ]]
 
-    if active and cmdID ~= nil and cmdID > 0 and not skipAltogether[cmdID] then  -- skip build commands
+    if active and cmdID ~= nil and cmdID > 0 and not skipAltogether[cmdID] then
         executeCommand(cmdID)
         active = false
     end
