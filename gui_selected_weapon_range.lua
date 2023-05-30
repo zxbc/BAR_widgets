@@ -188,8 +188,8 @@ function addWeaponRange(unitID, selection)
         -- Commander and units with long rnage always get displayed
         if weaponRange
             and selection
-            and (#weaponRanges < maxNumRanges or isCommander[unitDef.id] or weaponRange > 800)
-            and (weaponRange < 2000) -- don't show extremely long range stuff like nukes/anti
+            and ((#weaponRanges < maxNumRanges) or isCommander[unitDef.id] or (weaponRange > 800))
+            and (weaponRange < 2000)
             then
             addRange(unitID, unitDef, weaponRange, weaponRanges)
             return true
@@ -268,10 +268,11 @@ function drawRanges(stash, alphaMod)
         local weaponRange = stash[i]
         local unitID = weaponRange.unitID
         local range = weaponRange.range
+        if not range then return end
         local x, y, z = GetUnitPosition(unitID)
         if not x or not y or not z then 
             --Echo("Error finding position in cache!")
-            break 
+            return
         end
 
         glPushMatrix()
