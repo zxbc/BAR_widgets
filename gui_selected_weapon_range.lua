@@ -43,7 +43,7 @@ local alpha = 0.07              -- Alpha value for the drawing (default: 0.07)
 local custom_keybind_mode = false  -- Set to true if you want to use custom keybinds
                                    -- Set to false to enable default keybinds
 local cursor_unit_range = false  -- Set this to true to display an additional range indicator for unit under cursor (default: true)
-local update_frames = 15        -- This is how frequently the range display updates (lower is more taxing on CPU, default: 15)
+local update_frames = 10        -- This is how frequently the range display updates (lower is more taxing on CPU, default: 15)
 
 -- Vars
 local selChanged = true
@@ -294,7 +294,7 @@ function drawRanges(stash, alphaMod)
         -- display modes: 0 - filled, 1 - empty, 2 - combined
         -- draw empty circle
         if displayMode ~= 0 then
-            glColor(cColor[1], cColor[2], cColor[3], alpha * 1.5)
+            glColor(cColor[1], cColor[2], cColor[3], alpha * 2)
             glLineWidth(3)
             glDrawGroundCircle(x, y, z, range, 32)
         end

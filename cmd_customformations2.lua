@@ -592,7 +592,7 @@ function widget:MouseRelease(mx, my, mButton)
 
         -- we add the drag threshold code here  
         -- tracing to a point with a drag threshold pixel delta added to mouse coord, to get world distance
-        local selectionThreshold = Spring.GetConfigInt("MouseDragFrontCommandThreshold")
+        local selectionThreshold = Spring.GetConfigInt("MouseDragFrontCommandThreshold")*2
         local _, dragDeltaPos = spTraceScreenRay(mx,my+selectionThreshold, true, false, false, true)
         local _, pos = spTraceScreenRay(mx, my, true, false, false, true)
         local dragDelta = 0
