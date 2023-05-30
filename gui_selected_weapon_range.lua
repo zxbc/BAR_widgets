@@ -4,7 +4,7 @@ function widget:GetInfo()
         desc      = "Displays range circles of selected units' weapons at all time. Press m key to toggle on/off; press , key to cycle through colors; press . key to cycle through display modes. All keys rebindable, please read file for details.",
         author    = "Errrrrrr",
         date      = "May 2023",
-        version   = "1.4",
+        version   = "1.5",
         license   = "GNU GPL, v2 or later",
         layer     = 0,
         enabled   = true,
@@ -13,8 +13,11 @@ function widget:GetInfo()
 end
 
 -----------------------------------------------------------------------------------------
--- Version 1.4:
--- What's new: 
+-- Version 1.5:
+-- -- Further optimized code for better performance
+-- -- Added a toggle for cursor unit range display (default on)
+-- -- Added a param to change range update rate (in number of frames)
+-- Version 1.4
 -- -- Optimized some code and increased max number of ranges displayed by default to 100
 -- -- Added display of build ranges.
 -- -- Now displays max weapon range for all units.
@@ -33,17 +36,22 @@ end
 -----------------------------------------------------------------------------------------
 
 local maxDrawDistance = 5000    -- Max camera distance at which to draw ranges of selected units (default 5000)
-local maxNumRanges = 80         -- Max number of ranges to display (default 100)
-                                -- If you select more than this number of units, only this many will be drawn, starting from highest ranges
-local alpha = 0.07              -- Alpha value for the drawing (default at 0.07)
-                                -- Remember circles overlap and become denser in color!
-local custom_keybind_mode = false  -- set to true if you want to use custom keybinds
-                                  -- set to false to enable default keybinds
+local maxNumRanges = 80         -- Max number of ranges to display (default: 80)
+                                -- If you select more than this number of units, only this many will be drawn
+local alpha = 0.07              -- Alpha value for the drawing (default: 0.07)
+                                -- Remember circles overlap and become more saturated in color!
+local custom_keybind_mode = false  -- Set to true if you want to use custom keybinds
+                                   -- Set to false to enable default keybinds
+local cursor_unit_range = false  -- Set this to true to display an additional range indicator for unit under cursor (default: true)
+local update_frames = 15        -- This is how frequently the range display updates (lower is more taxing on CPU, default: 15)
 
 -- Vars
 local selChanged = true
 local selectedUnits = {}
 local weaponRanges = {}
+local cursorRanges = {}
+local mouseUnit = nil
+local rangePositionCache = {}
 
 local toggle = true
 local colorMode = 0
@@ -65,6 +73,8 @@ local GetUnitDefID = Spring.GetUnitDefID
 local GetCameraPosition = Spring.GetCameraPosition
 local GetUnitPosition = Spring.GetUnitPosition
 local GetCameraState = Spring.GetCameraState
+local GetMouseState = Spring.GetMouseState
+local TraceScreenRay = Spring.TraceScreenRay
 
 local glDepthTest = gl.DepthTest
 local glBlending = gl.Blending
@@ -102,6 +112,8 @@ end
 function widget:Initialize()
     selectedUnits = {}
     weaponRanges = {}
+    cursorRanges = {}
+    rangePositionCache = {}
 
     if custom_keybind_mode then
         widgetHandler.actionHandler:AddAction(self, "weapon_range_toggle", toggleRange, nil, "p")
@@ -148,48 +160,81 @@ function widget:KeyPress(key, mods, isRepeat)
     end
 end
 
--- Update the widget with the latest information at 0.1s intervals
-local delaySec = 0
+function addRange(unitID, unitDef, weaponRange, stash)
+    if isCommander[unitDef.id] then -- let's also add dgun range
+        local dgunRange = GetUnitWeaponState(unitID, 3, "range")
+        local fireRange = unitDef.maxWeaponRange
+        stash[#stash+1] = {unitID = unitID, range = weaponRange, factor = 50}
+        stash[#stash+1] = {unitID = unitID, range = dgunRange, factor = 50}
+        stash[#stash+1] = {unitID = unitID, range = fireRange, factor = 50}
+    else
+        stash[#stash+1] = {unitID = unitID, range = weaponRange, factor = 1}
+    end
+end
+
+-- selection: true if adding selected, false for adding cursor
+function addWeaponRange(unitID, selection)
+    if nil == unitID then return false end
+    local unitDef = GetUnitDef(unitID)
+    if unitDef then
+        local weaponRange = nil
+        -- if it's a builder, we display build range instead
+        if unitDef.isBuilder then
+            weaponRange = unitDef.buildDistance
+        else -- normal unit
+            weaponRange = unitDef.maxWeaponRange
+        end
+
+        -- Commander and units with long rnage always get displayed
+        if weaponRange
+            and selection
+            and (#weaponRanges < maxNumRanges or isCommander[unitDef.id] or weaponRange > 800)
+            and (weaponRange < 2000) -- don't show extremely long range stuff like nukes/anti
+            then
+            addRange(unitID, unitDef, weaponRange, weaponRanges)
+            return true
+        elseif weaponRange and not selection then
+            addRange(unitID, unitDef, weaponRange, cursorRanges)
+            return true
+        end
+    end
+    return false
+end
+
+-- Update using frames calculation
+local framesSince = 0
 function widget:Update(dt)
-    delaySec = delaySec + dt
-    if delaySec < 0.1 or not selChanged then return end
+    framesSince = framesSince + 1
+    if framesSince % update_frames == 1 and selChanged then
+        selChanged = false
+        selectedUnits = GetSelectedUnits()
+        --Echo("units selected: " .. #selectedUnits)
+        weaponRanges = {}
 
-    delaySec = 0
-    selChanged = false
-    selectedUnits = GetSelectedUnits()
-    --Echo("units selected: " .. #selectedUnits)
-    weaponRanges = {}
-
-    -- Loop through each selected unit and get its weapon ranges
-    local j = 1
-    for i=1, #selectedUnits do
-        --local weaponRange = GetUnitWeaponState(unitID, 1, "range")
-        local unitID = selectedUnits[i]
-        local unitDef = GetUnitDef(unitID)
-        if unitDef then
-            local weaponRange = nil
-            -- if it's a builder, we display build range instead
-            if unitDef.isBuilder then
-                weaponRange = unitDef.buildDistance
-            else -- normal unit
-                weaponRange = unitDef.maxWeaponRange
-            end
-
-            -- Commander and units with very long range always get displayed
-            if weaponRange and (#weaponRanges < maxNumRanges or isCommander[unitDef.id] or weaponRange > 800) then
-                if isCommander[unitDef.id] then -- let's also add dgun range
-                    local dgunRange = GetUnitWeaponState(unitID, 3, "range")
-                    local fireRange = unitDef.maxWeaponRange
-                    weaponRanges[j] = {unitID = unitID, range = weaponRange, factor = 50}
-                    weaponRanges[j+1] = {unitID = unitID, range = dgunRange, factor = 50}
-                    weaponRanges[j+2] = {unitID = unitID, range = fireRange, factor = 50}
-                    j = j + 3
-                else
-                    weaponRanges[j] = {unitID = unitID, range = weaponRange, factor = 1}
-                    j = j + 1
-                end
-            end
-
+        -- Loop through each selected unit and get its weapon ranges
+        for i=1, #selectedUnits do
+            --local weaponRange = GetUnitWeaponState(unitID, 1, "range")
+            local unitID = selectedUnits[i]
+            addWeaponRange(unitID, true)
+        end
+    end
+    
+    -- update mouse cursor hover unit
+    if framesSince % update_frames == 4 and cursor_unit_range then 
+        local mx, my = GetMouseState()
+        local desc, args = TraceScreenRay(mx, my, false)
+        local mUnitID
+        if desc and desc == "unit" then 
+            mUnitID = args
+        else
+            mUnitID = nil
+            mouseUnit = nil
+            cursorRanges = {}
+        end
+        if mUnitID and (mUnitID ~= mouseUnit) then
+            mouseUnit = mUnitID
+            cursorRanges = {}
+            addWeaponRange(mouseUnit, false)
         end
     end
 end
@@ -207,28 +252,32 @@ function widget:DrawWorldPreUnit()
     end
     if curHeight and curHeight > maxDrawDistance then return end
 
---[[     if #weaponRanges > maxNumRanges then   -- too many ranges to render
-        -- let's sort by range, long to short
-        local function longToShort()
-            return a.range > b.range
-        end
-        sort(weaponRanges, longToShort)
-    end ]]
-
     glDepthTest(false)
     --glCulling(GLBACK)
     glBlending ("alpha")
 
-    for i, weaponRange in ipairs(weaponRanges) do
+    drawRanges(weaponRanges, 1)
+    if cursor_unit_range then drawRanges(cursorRanges, 0.4) end
+
+    glBlending ("reset")
+    glDepthTest(true)
+end
+
+function drawRanges(stash, alphaMod)
+    for i=1, #stash do
+        local weaponRange = stash[i]
         local unitID = weaponRange.unitID
         local range = weaponRange.range
         local x, y, z = GetUnitPosition(unitID)
-        if not x or not y or not z then break end
+        if not x or not y or not z then 
+            --Echo("Error finding position in cache!")
+            break 
+        end
 
         glPushMatrix()
 
         c = range / 800   -- some reduction to saturation based on range and num units selected
-        c = c / (#weaponRanges * 0.22) * weaponRange.factor
+        c = c / (#stash * 0.25) * weaponRange.factor * alphaMod
         c = c > 1 and 1 or c
         c = c < 0.1 and 0.1 or c
         local cColor = {1, 1, 1, 0.5}
@@ -267,7 +316,4 @@ function widget:DrawWorldPreUnit()
         end
         glPopMatrix()
     end
-    glBlending ("reset")
-    glDepthTest(true)
 end
-
