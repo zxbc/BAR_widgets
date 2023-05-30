@@ -38,6 +38,7 @@ local SetActiveCommand = Spring.SetActiveCommand
 local TraceScreenRay = Spring.TraceScreenRay
 local GetKeySymbol = Spring.GetKeySymbol
 local GetKeyBindings = Spring.GetKeyBindings
+local GiveOrder = Spring.GiveOrder
 
 
 local function tableToString(t)
@@ -266,6 +267,15 @@ function widget:KeyRelease(key)
 
 end
 
+local function GiveNotifyingOrder(cmdID, cmdParams, cmdOpts)
+
+    if widgetHandler:CommandNotify(cmdID, cmdParams, cmdOpts) then
+        return
+    end
+
+    GiveOrder(cmdID, cmdParams, cmdOpts.coded)
+end
+
 function widget:SelectionChanged(sel)
     if not enabled then return false end
 
@@ -305,14 +315,14 @@ function executeCommand(cmdID)
  
     if curMods.meta and (cmdID ~= 34923 and cmdID ~= 34925) then
         cmdOpts = GetCmdOpts(curMods.alt, curMods.ctrl, false, curMods.shift, false)
-        GiveOrderToUnitArray(selectedUnits, CMD.INSERT, {0, cmdID, cmdOpts.coded, unpack(params)}, altOpts)
+        GiveNotifyingOrder(CMD.INSERT, {0, cmdID, cmdOpts.coded, unpack(params)}, altOpts)
     else
         if cmdID == 34923 or cmdID == 34925 then  -- insert doesn't play nice with set_target
             curMods.meta = false
         end
 
         cmdOpts = GetCmdOpts(curMods.alt, curMods.ctrl, curMods.meta, curMods.shift, false)
-        GiveOrderToUnitArray(selectedUnits, cmdID, params, cmdOpts)
+        GiveNotifyingOrder(cmdID, params, cmdOpts)
     end
     --echo("cmdID: ".. tostring(cmdID)..", opts: ".. tableToString(cmdOpts))
     -- echo("executeCommand set0")
