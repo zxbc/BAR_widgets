@@ -5,7 +5,7 @@ function widget:GetInfo()
       author    = "Beherith, modified by Errrrrrr",
       date      = "May 2023",
       license   = "GNU GPL, v2 or later for Lua code, (c) Beherith (mysterme@gmail.com) for GLSL",
-      layer     = 10,
+      layer     = 999999,
       enabled   = true
    }
 end
@@ -1294,9 +1294,12 @@ function widget:DrawWorld()
 				local ux, uy, uz = Spring.GetUnitViewPosition(unitID)
 			 	if ux and uy then
 					-- Draw text at the unit's location
+					gl.PushMatrix()
 					gl.Translate(ux, uy, uz)
 					gl.Billboard()
-					DrawStockpile(numStockpiled, numStockpileQued)
+					gl.Color(1, 1, 1, 1)
+					gl.Text(numStockpiled .. '/' .. (numStockpiled + numStockpileQued),  50, -50, 20, "rbos")
+					gl.PopMatrix()
 				end
 			end
 		end
@@ -1305,11 +1308,6 @@ function widget:DrawWorld()
 		gl.DepthTest(false)
     gl.DepthMask(false) --"BK OpenGL state resets", reset to default state
 	end
-end
-
-function DrawStockpile(numStockpiled, numStockpileQued)
-	gl.Color(1, 1, 1, 1)
-	gl.Text(numStockpiled .. '/' .. (numStockpiled + numStockpileQued),  50, -50, 20, "rbos")
 end
 
 function widget:TextCommand(command)
