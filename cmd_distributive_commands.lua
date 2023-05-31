@@ -82,6 +82,7 @@ local spGetFeaturesInCylinder = Spring.GetFeaturesInCylinder
 local spGetMyTeamID = Spring.GetMyTeamID
 local spGetUnitTeam = Spring.GetUnitTeam
 local spAreTeamsAllied = Spring.AreTeamsAllied
+local GetUnitDefID = Spring.GetUnitDefID
 
 
 local CMD_SETTARGET = 34923
@@ -158,6 +159,15 @@ local function deepCopy(original)
   return setmetatable(copy, getmetatable(original))
 end
 
+local function GetUnitDef(unitID)
+    local unitDefID = GetUnitDefID(unitID)
+    if unitDefID then
+        local unitDef = UnitDefs[unitDefID]
+        return unitDef
+    end
+    return nil
+end
+
 -- Initialize the widget
 function widget:Initialize()
   selectedUnits = {}
@@ -196,13 +206,17 @@ local function GetUnitWithLongestQueue()
 
   for i = 1, #selectedUnits do
       local unitID = selectedUnits[i]
-      local commands = spGetUnitCommands(unitID, -1)
-      local queueLength = #commands
+      local unitDef = GetUnitDef(unitID)
+      if unitDef and not unitDef.isBuilder then
 
-      if queueLength > longestQueueLength then
-          longestQueueUnitID = unitID
-          longestQueueLength = queueLength
-          longestCommands = commands
+        local commands = spGetUnitCommands(unitID, -1)
+        local queueLength = #commands
+
+        if queueLength > longestQueueLength then
+            longestQueueUnitID = unitID
+            longestQueueLength = queueLength
+            longestCommands = commands
+        end
       end
   end
 
@@ -358,7 +372,7 @@ function widget:CommandNotify(id, cmdParams, cmdOpts)
     -- if build id and shift + meta are held down, 
     -- we skip this whole thing because split build could be used
     local alt, ctrl, meta, shift = GetModKeys()
-    if id < 0 and shift and meta then  -- this is condition for split build widget, we skip
+    if id < 0 then  -- skip builds
       heldDown = false
       cmdStash = {}
       nodes = {}
