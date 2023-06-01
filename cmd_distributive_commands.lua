@@ -210,12 +210,14 @@ local function GetUnitWithLongestQueue()
       if unitDef and not unitDef.isBuilder then
 
         local commands = spGetUnitCommands(unitID, -1)
-        local queueLength = #commands
+        if commands then 
+          local queueLength = #commands
 
-        if queueLength > longestQueueLength then
-            longestQueueUnitID = unitID
-            longestQueueLength = queueLength
-            longestCommands = commands
+          if queueLength > longestQueueLength then
+              longestQueueUnitID = unitID
+              longestQueueLength = queueLength
+              longestCommands = commands
+          end
         end
       end
   end
