@@ -36,7 +36,7 @@ end
 -----------------------------------------------------------------------------------------
 
 local maxDrawDistance = 5000    -- Max camera distance at which to draw ranges of selected units (default 5000)
-local maxNumRanges = 80         -- Max number of ranges to display (default: 80)
+local maxNumRanges = 50         -- Max number of ranges to display (default: 50)
                                 -- If you select more than this number of units, only this many will be drawn
 local alpha = 0.07              -- Alpha value for the drawing (default: 0.07)
                                 -- Remember circles overlap and become more saturated in color!
@@ -268,53 +268,53 @@ function drawRanges(stash, alphaMod)
         local weaponRange = stash[i]
         local unitID = weaponRange.unitID
         local range = weaponRange.range
-        if not range then return end
-        local x, y, z = GetUnitPosition(unitID)
-        if not x or not y or not z then 
-            --Echo("Error finding position in cache!")
-            return
-        end
-
-        glPushMatrix()
-
-        c = range / 800   -- some reduction to saturation based on range and num units selected
-        c = c / (#stash * 0.25) * weaponRange.factor * alphaMod
-        c = c > 1 and 1 or c
-        c = c < 0.1 and 0.1 or c
-        local cColor = {1, 1, 1, 0.5}
-        if colorMode == 0 then
-            cColor = {1, 1, 1, c*alpha}
-        elseif colorMode == 1 then
-            cColor = {0.7, 0.3, 0.3, c*alpha}
-        elseif colorMode == 2 then
-            cColor = {0.3, 0.7, 0.3, c*alpha}
-        elseif colorMode == 3 then
-            cColor = {0.3, 0.3, 0.7, c*alpha}
-        end
-
-        -- display modes: 0 - filled, 1 - empty, 2 - combined
-        -- draw empty circle
-        if displayMode ~= 0 then
-            glColor(cColor[1], cColor[2], cColor[3], alpha * 2)
-            glLineWidth(3)
-            glDrawGroundCircle(x, y, z, range, 32)
-        end
-
-        local function drawCircle()
-            local numSegments = 32
-            local angleStep = (2 * pi) / numSegments
-            for i = 0, numSegments do
-                local angle = i * angleStep
-                glVertex(sin(angle) * range, 0, cos(angle) * range)
+        if range and unitID then 
+            local x, y, z = GetUnitPosition(unitID)
+            if not x or not y or not z then 
+                return
             end
-        end
 
-        -- draw filled circle
-        if displayMode ~= 1 then
-            glTranslate(x, y, z)
-            glColor(cColor[1], cColor[2], cColor[3], cColor[4])
-            glBeginEnd(GLTRIANGLE_FAN, drawCircle)
+            glPushMatrix()
+
+            c = range / 800   -- some reduction to saturation based on range and num units selected
+            c = c / (#stash * 0.25) * weaponRange.factor * alphaMod
+            c = c > 1 and 1 or c
+            c = c < 0.1 and 0.1 or c
+            local cColor = {1, 1, 1, 0.5}
+            if colorMode == 0 then
+                cColor = {1, 1, 1, c*alpha}
+            elseif colorMode == 1 then
+                cColor = {0.7, 0.3, 0.3, c*alpha}
+            elseif colorMode == 2 then
+                cColor = {0.3, 0.7, 0.3, c*alpha}
+            elseif colorMode == 3 then
+                cColor = {0.3, 0.3, 0.7, c*alpha}
+            end
+
+            -- display modes: 0 - filled, 1 - empty, 2 - combined
+            -- draw empty circle
+            if displayMode ~= 0 then
+                glColor(cColor[1], cColor[2], cColor[3], alpha * 2)
+                glLineWidth(3)
+                glDrawGroundCircle(x, y, z, range, 32)
+            end
+
+            local function drawCircle()
+                local numSegments = 32
+                local angleStep = (2 * pi) / numSegments
+                for i = 0, numSegments do
+                    local angle = i * angleStep
+                    glVertex(sin(angle) * range, 0, cos(angle) * range)
+                end
+            end
+
+            -- draw filled circle
+            if displayMode ~= 1 then
+                glTranslate(x, y, z)
+                glColor(cColor[1], cColor[2], cColor[3], cColor[4])
+                glBeginEnd(GLTRIANGLE_FAN, drawCircle)
+            end
+            glPopMatrix()
         end
-        glPopMatrix()
     end
 end
