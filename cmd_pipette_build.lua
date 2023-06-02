@@ -79,7 +79,7 @@ function SetActiveCommandToBuild()
                     -- Set the active command to build the target unit
                 if Spring.SetActiveCommand('buildunit_'..targetDef.name) then
                     --Spring.Echo("Blueprint successfully copied")
-                    Spring.PlaySoundFile(build_sound, 0.5, 'ui')
+                    Spring.PlaySoundFile(build_sound, 0.3, 'ui')
                     return true
                 end
                 break
