@@ -315,14 +315,14 @@ function executeCommand(cmdID)
  
     if curMods.meta and (cmdID ~= 34923 and cmdID ~= 34925) then
         cmdOpts = GetCmdOpts(curMods.alt, curMods.ctrl, false, curMods.shift, false)
-        GiveNotifyingOrder(CMD.INSERT, {0, cmdID, cmdOpts.coded, unpack(params)}, altOpts)
+        GiveOrder(CMD.INSERT, {0, cmdID, cmdOpts.coded, unpack(params)}, altOpts)
     else
         if cmdID == 34923 or cmdID == 34925 then  -- insert doesn't play nice with set_target
             curMods.meta = false
         end
 
         cmdOpts = GetCmdOpts(curMods.alt, curMods.ctrl, curMods.meta, curMods.shift, false)
-        GiveNotifyingOrder(cmdID, params, cmdOpts)
+        GiveOrder(cmdID, params, cmdOpts)
     end
     --echo("cmdID: ".. tostring(cmdID)..", opts: ".. tableToString(cmdOpts))
     -- echo("executeCommand set0")
