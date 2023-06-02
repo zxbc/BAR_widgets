@@ -27,7 +27,7 @@ end
 local custom_keybind_mode = false
 
 local split_area_mode = true  -- this mode allows for the distribute key to split area commands
-                              -- *highly* recommend keeping this on, because distributeLongest
+                              -- *highly* recommend keeping this on, because longestQueue method
                               --  cannot distribute area settarget (it won't be in queue)
 local insert_mode = false  -- this is a legacy mode, no longer viable
 
@@ -370,10 +370,8 @@ end
 
 -- intercept commands issued during heldDown and save them
 function widget:CommandNotify(id, cmdParams, cmdOpts)
-
-    -- if build id and shift + meta are held down, 
-    -- we skip this whole thing because split build could be used
-    local alt, ctrl, meta, shift = GetModKeys()
+    -- if build, we skip this whole thing because split build could be used
+    --local alt, ctrl, meta, shift = GetModKeys()
     if id < 0 then  -- skip builds
       heldDown = false
       cmdStash = {}
@@ -381,13 +379,13 @@ function widget:CommandNotify(id, cmdParams, cmdOpts)
       return false
     end
 
-    -- OTHERWISE:
     -- add command to cmdStash if keys held
     if heldDown then
       -- { number id, params = table params, options = table opts }
-      cmdOpts = GetCmdOpts(cmdOpts.alt, cmdOpts.ctrl, cmdOpts.meta,cmdOpts.shift,false)
+      --cmdOpts = GetCmdOpts(cmdOpts.alt, cmdOpts.ctrl, cmdOpts.meta,cmdOpts.shift,false)
       local cmdItem = { id, params = cmdParams, options = cmdOpts } 
-      if split_area_mode and cmdParams[4] then
+
+      if split_area_mode and cmdParams[4] and cmdParams[4] ~= 0 then
         -- figure out what kind of units to filter
         local areaUnits = spGetUnitsInCylinder(cmdParams[1],cmdParams[3],cmdParams[4])
         local areaFeatures = spGetFeaturesInCylinder(cmdParams[1],cmdParams[3],cmdParams[4])
