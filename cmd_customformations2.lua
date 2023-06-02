@@ -672,7 +672,7 @@ function widget:MouseRelease(mx, my, mButton)
                 local orders
                 if (#mUnits <= maxHungarianUnits) then
                     orders = GetOrdersHungarian(interpNodes, mUnits, #mUnits, shift and not meta)
-                    Spring.Echo("Used Hungarian!")
+                    --Spring.Echo("Used Hungarian!")
                 else
                     orders = GetOrdersNoX(interpNodes, mUnits, #mUnits, shift and not meta)
                 end
