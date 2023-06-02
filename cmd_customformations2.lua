@@ -975,9 +975,9 @@ end
 local frames = 0
 function widget:Update(deltaTime)
     frames = frames + 1
-    -- cache unit and note positions every 3 frames when drawing formation
-    -- worst case scenario is cache is 3 frames old
-    if frames % 3 == 1 and usingCmd and #fNodes > 1 then
+    -- cache unit and note positions every 2 frames when drawing formation
+    -- worst case scenario is cache is 2 frames old
+    if frames % 2 == 1 and usingCmd and #fNodes > 1 then
         updatePreprocessingCache(false)
     end
 --[[     if frames % 3 == 2 and delayedProcessing > 0 then
