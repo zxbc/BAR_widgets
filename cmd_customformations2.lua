@@ -2,16 +2,25 @@
 function widget:GetInfo()
     return {
         name      = "CustomFormations2",
-        desc      = "Allows you to draw your own formation line. Modfiied by Errrrrrr",
-        author    = "Niobium", -- based on 'Custom Formations' by jK and gunblob
+        desc      = "Allows you to draw your own formation line. Modified for speed and quality on high unit count.",
+        author    = "Errrrrrr, Niobium", -- based on 'Custom Formations' by jK and gunblob
         version   = "v4.3",
-        date      = "April, 2013",
+        date      = "June 2, 2023",
         license   = "GNU GPL, v2 or later",
         layer     = 10000,
         enabled   = true,
         handler   = true,
     }
 end
+
+-----------------------------------------------------------------------------------------
+-- Modifications by Errrrrrr:
+-- Distance matrices calc and sorting for matching algo moved to Update, values cached
+-- Clash resolution changed to hierarchical, if time allows will process more tiers 
+-- Overall optimality should improve with very large unit count
+-- Added some console messages for the new processing, set debugMode to true to see them
+-----------------------------------------------------------------------------------------
+local debugMode = false
 
 -- 06/04/13 -- Cleaned up commands in Custom Formations:
 -- To give a line command: select command, then right click & drag
@@ -44,7 +53,7 @@ local minFormationLength = 20
 local maxHngTime = 0.01 -- Desired maximum time for hungarian algorithm
 local maxNoXTime = 0.01 -- Strict maximum time for backup algorithm
 
-local defaultHungarianUnits	= 20 -- Need a baseline to start from when no config data saved
+local defaultHungarianUnits	= 40 -- Need a baseline to start from when no config data saved
 local minHungarianUnits		= 10 -- If we kept reducing maxUnits it can get to a point where it can never increase, so we enforce minimums on the algorithms.
 local unitIncreaseThresh	= 0.85 -- We only increase maxUnits if the units are great enough for time to be meaningful
 
@@ -113,6 +122,17 @@ local inMinimap = false -- Is the line being drawn in the minimap
 local endShift = false -- True to reset command when shift is released
 
 local MiniMapFullProxy = (Spring.GetConfigInt("MiniMapFullProxy", 0) == 1)
+
+-- cache tables for preprocessing   
+local unitSetCache = {}
+local nodesCache = {}
+local unitsCache = {}
+
+-- cache tables for delayed processing
+local delayedProcessing = 0
+local unitSetCacheDelayed = {}
+local nodesCacheDelayed = {}
+local unitsCacheDelayed = {}
 
 --------------------------------------------------------------------------------
 -- Speedups
@@ -183,6 +203,18 @@ local selectedUnitsCount = Spring.GetSelectedUnitsCount()
 --------------------------------------------------------------------------------
 -- Helper Functions
 --------------------------------------------------------------------------------
+-- deepcopy a table
+local function deepCopy(original)
+    if type(original) ~= 'table' then
+        return original
+    end
+    local copy = {}
+    for key, value in next, original, nil do
+        copy[deepCopy(key)] = deepCopy(value)
+    end
+    return setmetatable(copy, getmetatable(original))
+end
+
 local function GetModKeys()
 
     local alt, ctrl, meta, shift = spGetModKeyState()
@@ -518,6 +550,7 @@ function widget:MouseMove(mx, my, dx, dy, mButton)
                 GiveNotifyingOrder(usingCmd, pos, cmdOpts)
                 lastPathPos = pos
             end
+
         end
     end
 
@@ -629,15 +662,17 @@ function widget:MouseRelease(mx, my, mButton)
         else
             -- Order is a formation; line was drawn
             -- Are any units able to execute it?
-            local mUnits = GetExecutingUnits(usingCmd)
+            local mUnits = unitsCache -- GetExecutingUnits(usingCmd)
 
-            if #mUnits > 0 then
+            if mUnits and #mUnits > 0 then
 
-                local interpNodes = GetInterpNodes(mUnits)
+                local interpNodes = nodesCache --GetInterpNodes(mUnits)
+                if not interpNodes or #interpNodes == 0 then return end
 
                 local orders
                 if (#mUnits <= maxHungarianUnits) then
                     orders = GetOrdersHungarian(interpNodes, mUnits, #mUnits, shift and not meta)
+                    Spring.Echo("Used Hungarian!")
                 else
                     orders = GetOrdersNoX(interpNodes, mUnits, #mUnits, shift and not meta)
                 end
@@ -650,7 +685,7 @@ function widget:MouseRelease(mx, my, mButton)
                         local orderPair = orders[i]
                         local orderPos = orderPair[2]
                         GiveNotifyingOrderToUnit(unitArr, orderArr, orderPair[1], CMD_INSERT, {0, usingCmd, cmdOpts.coded, orderPos[1], orderPos[2], orderPos[3]}, altOpts)
-                        if (i == #orders and #unitArr > 0) or #unitArr >= 100 then
+                        if (i == #orders and #unitArr > 0) or #unitArr >= 583 then
                             Spring.GiveOrderArrayToUnitArray(unitArr, orderArr, true)
                             unitArr = {}
                             orderArr = {}
@@ -660,7 +695,7 @@ function widget:MouseRelease(mx, my, mButton)
                     for i = 1, #orders do
                         local orderPair = orders[i]
                         GiveNotifyingOrderToUnit(unitArr, orderArr, orderPair[1], usingCmd, orderPair[2], cmdOpts)
-                        if (i == #orders and #unitArr > 0) or #unitArr >= 100 then
+                        if (i == #orders and #unitArr > 0) or #unitArr >= 583 then
                             Spring.GiveOrderArrayToUnitArray(unitArr, orderArr, true)
                             unitArr = {}
                             orderArr = {}
@@ -669,6 +704,17 @@ function widget:MouseRelease(mx, my, mButton)
                 end
 
                 spSetActiveCommand(0) -- Deselect command
+
+--[[                 -- move caches over to delayed, initiate delayed processing
+                delayedProcessing = 5 -- we set this to 5 ticks of 0.1s for a total of 0.5s, counting down
+                unitSetCacheDelayed = deepCopy(unitSetCache)
+                nodesCacheDelayed = deepCopy(nodesCache)
+                unitsCacheDelayed = deepCopy(unitsCache) ]]
+
+                -- clear preprocessing caches
+                unitSetCache = {}
+                nodesCache = {}
+                unitsCache = {}
             end
         end
     end
@@ -837,11 +883,115 @@ function widget:DrawInMiniMap()
     glPopMatrix()
 end
 
+local function updatePreprocessingCache(delayed)
+    local units, nodes, unitSet
+    unitsCache = GetExecutingUnits(usingCmd)
+    units = unitsCache
+
+    if #units > 0 then
+        nodesCache = GetInterpNodes(unitsCache)
+        nodes = nodesCache
+        unitSet = unitSetCache
+
+        --Spring.Echo("Processing unitSetCache on ".. tostring(#unitsCache).." units...")
+
+        local fdist = -1  
+        local fm  
+        local _, _, _, shifted = GetModKeys()
+        local unitCount = #units
+
+        if unitCount == 0 then return end
+
+        for u = 1, unitCount do
+
+            -- Get unit position
+            local ux, uz
+            if shifted then
+                ux, _, uz = GetUnitFinalPosition(units[u])
+            else
+                ux, _, uz = spGetUnitPosition(units[u])
+            end
+            if ux then
+                unitSet[u] = {ux, units[u], uz, -1} -- Such that x/z are in same place as in nodes (So we can use same sort function)
+
+                -- Work on finding furthest points (As we have ux/uz already)
+                for i = u - 1, 1, -1 do
+
+                    local up = unitSet[i]
+                    local vx, vz = up[1], up[3]
+                    local dx, dz = vx - ux, vz - uz
+                    local dist = dx*dx + dz*dz
+
+                    if (dist > fdist) then
+                        fdist = dist
+                        fm = (vz - uz) / (vx - ux)
+                    end
+                end
+            end
+        end
+
+        if #nodes == 0 then return end
+
+        -- Maybe nodes are further apart than the units
+        for i = 1, unitCount - 1 do
+
+            local np = nodes[i]
+            local nx, nz = np[1], np[3]
+
+            for j = i + 1, unitCount do
+
+                local mp = nodes[j]
+                local mx, mz = mp[1], mp[3]
+                local dx, dz = mx - nx, mz - nz
+                local dist = dx*dx + dz*dz
+
+                if (dist > fdist) then
+                    fdist = dist
+                    fm = (mz - nz) / (mx - nx)
+                end
+            end
+        end
+
+        local function sortFunc(a, b)
+            -- y = mx + c
+            -- c = y - mx
+            -- c = y + x / m (For perp line)
+            return (a[3] + a[1] / fm) < (b[3] + b[1] / fm)
+        end
+
+        if fm then
+            tsort(unitSet, sortFunc)
+            tsort(nodes, sortFunc)
+        end
+
+        for u = 1, unitCount do
+            unitSet[u][4] = nodes[u]
+        end
+    else 
+        return
+    end
+end
+
+local frames = 0
 function widget:Update(deltaTime)
+    frames = frames + 1
+    -- cache unit and note positions every 3 frames when drawing formation
+    -- worst case scenario is cache is 3 frames old
+    if frames % 3 == 1 and usingCmd and #fNodes > 1 then
+        updatePreprocessingCache(false)
+    end
+--[[     if frames % 3 == 2 and delayedProcessing > 0 then
+        --Spring.Echo("delayed processing left: ".. tostring(delayedProcessing))
+        -- do delayed processing here
+
+        delayedProcessing = delayedProcessing - 1
+        
+    end ]]
+
     dimmAlpha = dimmAlpha - lineFadeRate * deltaTime
     if dimmAlpha <= 0 then
         dimmNodes = {}
-        widgetHandler:RemoveWidgetCallIn("Update", self)
+        --widgetHandler:RemoveWidgetCallIn("Update", self)
         if #fNodes == 0 then
             widgetHandler:RemoveWidgetCallIn("DrawWorld", self)
             widgetHandler:RemoveWidgetCallIn("DrawInMiniMap", self)
@@ -874,7 +1024,12 @@ function GetOrdersNoX(nodes, units, unitCount, shifted)
     ---------------------------------------------------------------------------------------------------------
     -- Find initial assignments
     ---------------------------------------------------------------------------------------------------------
-    local unitSet = {}
+    -- we are doing preprocessing in update, only do it here if no cache
+    local unitSet = unitSetCache
+    if #unitSet == 0 then -- somehow cache wasn't ready
+        updatePreprocessingCache()
+    end
+--[[     local unitSet = {}
     local fdist = -1
     local fm
 
@@ -939,98 +1094,128 @@ function GetOrdersNoX(nodes, units, unitCount, shifted)
 
     for u = 1, unitCount do
         unitSet[u][4] = nodes[u]
-    end
+    end ]]
 
     ---------------------------------------------------------------------------------------------------------
     -- Main part of algorithm
     ---------------------------------------------------------------------------------------------------------
-
-    -- M/C for each finished matching
-    local Ms = {}
-    local Cs = {}
-
-    -- Stacks to hold finished and still-to-check units
-    local stFin = {}
-    local stFinCnt = 0
-    local stChk = {}
-    local stChkCnt = 0
-
-    -- Add all units to check stack
-    for u = 1, unitCount do
-        stChk[u] = u
+    -- let's check how much time is already wasted to see if optimization is warranted before while loop
+    if debugMode then
+        local spentTime = osclock() - startTime
+        Spring.Echo("Time spent in preprocessing: " .. tostring(spentTime))
     end
-    stChkCnt = unitCount
 
-    -- Begin algorithm
-    while ((stChkCnt > 0) and (osclock() - startTime < maxNoXTime)) do
+    local curTime = osclock()
+    local binSize = ceil(unitCount / 100)
+    -- we're going to do multiple passes of the main algo until binSize is down to 1
+    while (binSize >= 1) and (osclock() - startTime < maxNoXTime) do
 
-        -- Get unit, extract position and matching node position
-        local u = stChk[stChkCnt]
-        local ud = unitSet[u]
-        local ux, uz = ud[1], ud[3]
-        local mn = ud[4]
-        local nx, nz = mn[1], mn[3]
+        -- M/C for each finished matching
+        local Ms = {}
+        local Cs = {}
 
-        -- Calculate M/C
-        local Mu = (nz - uz) / (nx - ux)
-        local Cu = uz - Mu * ux
+        -- Stacks to hold finished and still-to-check units
+        local stFin = {}
+        local stFinCnt = 0
+        local stChk = {}
+        local stChkCnt = 0
 
-        -- Check for clashes against finished matches
-        local clashes = false
+        -- Add all units to check stack
+        for u = 1, unitCount do
+            stChk[u] = u
+        end
+        stChkCnt = unitCount
 
-        for i = 1, stFinCnt do
 
-            -- Get opposing unit and matching node position
-            local f = stFin[i]
-            local fd = unitSet[f]
-            local tn = fd[4]
+        local iterations = 0
+        -- Begin algorithm
+        while ((stChkCnt > 0) and (osclock() - startTime < maxNoXTime)) do
+            iterations = iterations + 1
 
-            -- Get collision point
-            local ix = (Cs[f] - Cu) / (Mu - Ms[f])
-            local iz = Mu * ix + Cu
+            -- Get unit, extract position and matching node position
+            local u = stChk[stChkCnt]
+            local ud = unitSet[u]
+            local ux, uz = ud[1], ud[3]
+            local mn = ud[4]
+            local nx, nz = mn[1], mn[3]
 
-            -- Check bounds
-            if ((ux - ix) * (ix - nx) >= 0) and
-                    ((uz - iz) * (iz - nz) >= 0) and
-                    ((fd[1] - ix) * (ix - tn[1]) >= 0) and
-                    ((fd[3] - iz) * (iz - tn[3]) >= 0) then
+            -- Calculate M/C
+            local Mu = (nz - uz) / (nx - ux)
+            local Cu = uz - Mu * ux
 
-                -- Lines cross
+            -- Check for clashes against finished matches
+            local clashes = false
 
-                -- Swap matches, note this retains solution integrity
-                ud[4] = tn
-                fd[4] = mn
+            for i = 1, stFinCnt, binSize do
 
-                -- Remove clashee from finished
-                stFin[i] = stFin[stFinCnt]
-                stFinCnt = stFinCnt - 1
+                -- Get opposing unit and matching node position
+                local f = stFin[i]
+                local fd = unitSet[f]
+                if nil ~= fd then
+                    local tn = fd[4]
 
-                -- Add clashee to top of check stack
-                stChkCnt = stChkCnt + 1
-                stChk[stChkCnt] = f
+                    -- Get collision point
+                    local ix = (Cs[f] - Cu) / (Mu - Ms[f])
+                    local iz = Mu * ix + Cu
 
-                -- No need to check further
-                clashes = true
-                break
+                    -- Check bounds
+                    if ((ux - ix) * (ix - nx) >= 0) and
+                            ((uz - iz) * (iz - nz) >= 0) and
+                            ((fd[1] - ix) * (ix - tn[1]) >= 0) and
+                            ((fd[3] - iz) * (iz - tn[3]) >= 0) then
+
+                        -- Lines cross
+
+                        -- Swap matches, note this retains solution integrity
+                        ud[4] = tn
+                        fd[4] = mn
+
+                        -- Remove clashee from finished
+                        stFin[i] = stFin[stFinCnt]
+                        stFinCnt = stFinCnt - 1
+
+                        -- Add clashee to top of check stack
+                        stChkCnt = stChkCnt + 1
+                        stChk[stChkCnt] = f
+
+                        -- No need to check further
+                        clashes = true
+                        break
+                    end
+                end
+            end
+
+            if not clashes then
+
+                -- Add checked unit to finished
+                stFinCnt = stFinCnt + 1
+                stFin[stFinCnt] = u
+
+                -- Remove from to-check stack (Easily done, we know it was one on top)
+                stChkCnt = stChkCnt - 1
+
+                -- We can set the M/C now
+                Ms[u] = Mu
+                Cs[u] = Cu
             end
         end
-
-        if not clashes then
-
-            -- Add checked unit to finished
-            stFinCnt = stFinCnt + 1
-            stFin[stFinCnt] = u
-
-            -- Remove from to-check stack (Easily done, we know it was one on top)
-            stChkCnt = stChkCnt - 1
-
-            -- We can set the M/C now
-            Ms[u] = Mu
-            Cs[u] = Cu
+        
+        local spentTime = osclock() - curTime
+        curTime = osclock()
+        -- some debug output
+        if debugMode then
+            Spring.Echo("binSize: "..tostring(binSize).." - Terminated after "..tostring(iterations).." iterations")
+            if stChkCnt == 0 then
+                Spring.Echo("binSize: "..tostring(binSize).." - Ended optimal!")
+            else
+                Spring.Echo("binSize: "..tostring(binSize).." - Clashes remain: "..tostring(stChkCnt))
+            end
+            Spring.Echo("Time spent in binSize "..tostring(binSize)..": " .. tostring(spentTime)..", "..tostring(100*spentTime/maxNoXTime).."% of total")
         end
+        binSize = floor(binSize / 2) -- reducing binSize by half next iteration
     end
 
-    ---------------------------------------------------------------------------------------------------------
+------------------------------------------------------------------------------------------------
     -- Return orders
     ---------------------------------------------------------------------------------------------------------
     local orders = {}
