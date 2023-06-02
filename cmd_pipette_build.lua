@@ -22,6 +22,8 @@ local custom_keybind_mode = false
 
 local targetUnitID
 
+local build_sound = 'Sounds/commands/cmd-build.wav'
+
 function widget:Initialize()
     targetUnitID = nil
     widgetHandler.actionHandler:AddAction(self, "pipette_build", pipetteBuild, nil, "p")
@@ -50,7 +52,7 @@ function doCopy()
   local oldTarget = targetUnitID  -- save it in case blueprint copy fails
 
   -- Get the unit/building ID under the cursor
-  local desc, args = Spring.TraceScreenRay(x, y, false)
+  local desc, args = Spring.TraceScreenRay(x, y, false, true, true, true)
   --Spring.Echo("desc: " .. tostring(desc)..", args: "..tableToString(args))
   if desc == "unit" then
       targetUnitID = args  -- Set the target unit ID
@@ -77,6 +79,7 @@ function SetActiveCommandToBuild()
                     -- Set the active command to build the target unit
                 if Spring.SetActiveCommand('buildunit_'..targetDef.name) then
                     --Spring.Echo("Blueprint successfully copied")
+                    Spring.PlaySoundFile(build_sound, 1.0, 'ui')
                     return true
                 end
                 break
