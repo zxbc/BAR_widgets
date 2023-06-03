@@ -41,15 +41,15 @@ end
     to something like 30.
  ]]
 
-local targetFPS = 60                    -- Below this FPS the settings will start to be turned down
-local normalFPS = targetFPS + 30        -- Above this FPS the settings will be turned back up
+local targetFPS = 45                   -- Below this FPS the settings will start to be turned down
+local normalFPS = targetFPS + 13        -- Above this FPS the settings will be turned back up
                                         -- NOTE: normalFPS should be at least 15-20 FPS above targetFPS to avoid ping pong adjustments
 local adjustmentSpeed = 5       -- The number of consecutive seconds to wait before adjustment is made both up and down
 local consoleOutput = true      -- set to false to prevent printout to console when adjustment is made
 
 local lowestSettings = {    -- The lowest settings of each allowed. 0 means to turn it off (only for ssao and bloom)
-        shadow = 2,         -- shadow range is from 1 to 6
-        ssao = 0,           -- ssao range is from 0 to 3
+        shadow = 1,         -- shadow range is from 1 to 6
+        ssao = 1,           -- ssao range is from 0 to 3
         bloom = 1           -- bloom range is from 0 to 3
 }
 
