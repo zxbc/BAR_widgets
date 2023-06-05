@@ -667,7 +667,9 @@ function widget:MouseRelease(mx, my, mButton)
             if mUnits and #mUnits > 0 then
 
                 local interpNodes = nodesCache --GetInterpNodes(mUnits)
-                if not interpNodes or #interpNodes == 0 then return end
+                if not interpNodes or #interpNodes == 0 then 
+                    nodesCache = GetInterpNodes(mUnits)
+                end
 
                 local orders
                 if (#mUnits <= maxHungarianUnits) then
@@ -1334,6 +1336,8 @@ function findHungarian(array, n)
     for i = 1, n do
 
         local aRow = array[i]
+        if nil == aRow then break end
+
         local minVal = aRow[1]
         for j = 2, n do
             if aRow[j] < minVal then
@@ -1350,6 +1354,8 @@ function findHungarian(array, n)
     for j = 1, n do
 
         local minVal = array[1][j]
+        if nil == minVal then break end
+
         for i = 2, n do
             if array[i][j] < minVal then
                 minVal = array[i][j]
@@ -1364,6 +1370,8 @@ function findHungarian(array, n)
     -- Star zeroes
     for i = 1, n do
         local aRow = array[i]
+        if nil == aRow then break end
+        
         for j = 1, n do
             if (aRow[j] == 0) and not colcover[j] then
                 colcover[j] = true
