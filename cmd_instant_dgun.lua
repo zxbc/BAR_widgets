@@ -1,12 +1,12 @@
 function widget:GetInfo()
     return {
         name      = "Instant Dgun",
-        desc      = "Aims when you press d-gun key down, fires when you release. VERSION 2: seemelss integration with meta key use, it should feel just like with shift queue!",
+        desc      = "Aims when you press d-gun key down, fires when you release. VERSION 2: seamless integration with meta key use, it should feel just like with shift!",
         author    = "Errrrrrr",
         date      = "May 23, 2023",
         version   = "2.0",
         license   = "GNU GPL, v2 or later",
-        layer     = 9999,
+        layer     = 999999,
         enabled   = true,
         handler   = true,
     }
