@@ -6,7 +6,7 @@ function widget:GetInfo()
         date      = "May 2023",
         version   = "1.5",
         license   = "GNU GPL, v2 or later",
-        layer     = 0,
+        layer     = 9999,
         enabled   = true,
         handler   = true,
     }
@@ -160,7 +160,7 @@ function widget:KeyPress(key, mods, isRepeat)
     end
 end
 
-function addRange(unitID, unitDef, weaponRange, stash)
+local function addRange(unitID, unitDef, weaponRange, stash)
     if isCommander[unitDef.id] then -- let's also add dgun range
         local dgunRange = GetUnitWeaponState(unitID, 3, "range")
         local fireRange = unitDef.maxWeaponRange
@@ -170,10 +170,11 @@ function addRange(unitID, unitDef, weaponRange, stash)
     else
         stash[#stash+1] = {unitID = unitID, range = weaponRange, factor = 1}
     end
+    --Echo("added range: "..tostring(weaponRange))
 end
 
 -- selection: true if adding selected, false for adding cursor
-function addWeaponRange(unitID, selection)
+local function addWeaponRange(unitID, selection)
     if nil == unitID then return false end
     local unitDef = GetUnitDef(unitID)
     if unitDef then
@@ -239,31 +240,7 @@ function widget:Update(dt)
     end
 end
 
--- Draw stuff
-function widget:DrawWorldPreUnit()
-    if not selectedUnits or not weaponRanges or not toggle then return end
-
-    local curHeight
-    local camState = GetCameraState()
-    if (camState.name == "ta") then 
-        curHeight = camState.height
-    elseif (camState.name == "spring") then 
-        curHeight = camState.dist 
-    end
-    if curHeight and curHeight > maxDrawDistance then return end
-
-    glDepthTest(false)
-    --glCulling(GLBACK)
-    glBlending ("alpha")
-
-    drawRanges(weaponRanges, 1)
-    if cursor_unit_range then drawRanges(cursorRanges, 0.4) end
-
-    glBlending ("reset")
-    glDepthTest(true)
-end
-
-function drawRanges(stash, alphaMod)
+local function drawRanges(stash, alphaMod)
     for i=1, #stash do
         local weaponRange = stash[i]
         local unitID = weaponRange.unitID
@@ -318,3 +295,29 @@ function drawRanges(stash, alphaMod)
         end
     end
 end
+
+-- Draw stuff
+function widget:DrawWorldPreUnit()
+    if not selectedUnits or not weaponRanges or not toggle then return end
+
+    local curHeight
+    local camState = GetCameraState()
+    if (camState.name == "ta") then 
+        curHeight = camState.height
+    elseif (camState.name == "spring") then 
+        curHeight = camState.dist 
+    end
+    if curHeight and curHeight > maxDrawDistance then return end
+
+    glDepthTest(false)
+    --glCulling(GLBACK)
+    glBlending ("alpha")
+
+    drawRanges(weaponRanges, 1)
+    if cursor_unit_range then drawRanges(cursorRanges, 0.4) end
+
+    glBlending ("reset")
+    glDepthTest(true)
+end
+
+
