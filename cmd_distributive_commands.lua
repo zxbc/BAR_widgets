@@ -284,6 +284,8 @@ function executeCommands(noShift)
   local numUnits = #selectedUnits
   local numCmds= #cmdStash
 
+  if #nodes < numUnits then return end
+
   local orders
   if (numUnits <= maxHungarianUnits) then
       orders = GetOrdersHungarian(nodes, selectedUnits, numUnits, false)
@@ -355,7 +357,7 @@ function updateNodes()
     end
     count = count + numInGroup[i]
   end
-
+  if #nodes < numUnits then return false end
   --echo("nodes updated!: "..tableToString(nodes))
 end
 
@@ -424,7 +426,6 @@ function widget:CommandNotify(id, cmdParams, cmdOpts)
           end
         end
         updateNodes()
-        return false
       end
 
       if #cmdStash < #selectedUnits then  -- we will not queue more if we have more cmds than units
@@ -481,15 +482,21 @@ function GetOrdersNoX(nodes, units, unitCount, shifted)
     end
   end
 
+
   -- Maybe nodes are further apart than the units
   for i = 1, unitCount - 1 do
 
     local np = nodes[i]
+    if nil == np then break end
+
     local nx, nz = np[1], np[3]
 
     for j = i + 1, unitCount do
 
         local mp = nodes[j]
+
+        if nil == mp then break end
+
         local mx, mz = mp[1], mp[3]
         local dx, dz = mx - nx, mz - nz
         local dist = dx*dx + dz*dz
@@ -649,6 +656,8 @@ function GetOrdersHungarian(nodes, units, unitCount, shifted)
       for j = 1, unitCount do
 
         local nodePos = nodes[j]
+        if nil == nodePos or nil == nodePos[1] or nil == nodePos[3] then break end
+
         local dx, dz = nodePos[1] - ux, nodePos[3] - uz
         dists[j] = floor(sqrt(dx*dx + dz*dz) + 0.5)
         -- Integer distances = greatly improved algorithm speed
