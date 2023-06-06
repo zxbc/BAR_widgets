@@ -31,6 +31,19 @@ end
 
 --------------------------------------------------------------------------------
 --------------------------------------------------------------------------------
+local function GetCmdOpts(alt, ctrl, meta, shift, right)
+    local opts = { alt=alt, ctrl=ctrl, meta=meta, shift=shift, right=right }
+    local coded = 0
+  
+    if alt   then coded = coded + CMD.OPT_ALT   end
+    if ctrl  then coded = coded + CMD.OPT_CTRL  end
+    if meta  then coded = coded + CMD.OPT_META  end
+    if shift then coded = coded + CMD.OPT_SHIFT end
+    if right then coded = coded + CMD.OPT_RIGHT end
+  
+    opts.coded = coded
+    return opts
+end
 
 function widget:PlayerChanged(playerID)
 	if Spring.GetSpectatingState() then
@@ -80,11 +93,14 @@ function widget:CommandNotify(cmdID, cmdParams, cmdOpts)
 end
 
 function widget:UnitFinished(unitID, unitDefID, unitTeam)
+	local cmdOpts = GetCmdOpts(false,false,false,false,false)
+	local altOpts = GetCmdOpts(true, false, false, false, false)
+
 	local name = unitName[unitDefID]
 	unitSet[name] = unitSet[unitName[unitDefID]] or {}
 	if unitTeam == Spring.GetMyTeamID() then
 		for cmdID, cmdParam in pairs(unitSet[name]) do
-			Spring.GiveOrderToUnit(unitID, cmdID, { cmdParam }, 0)
+			Spring.GiveOrderToUnit(unitID, CMD.INSERT, {0, cmdID, cmdOpts.coded, cmdParam }, altOpts)
 		end
 	end
 end
