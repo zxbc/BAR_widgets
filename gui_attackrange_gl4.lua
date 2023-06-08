@@ -196,18 +196,18 @@ local function initializeUnitDefRing(unitDefID)
 				Spring.Echo("cylinder weapon found!")
 			end
 
---[[ 			local customParams = weaponDef.customParams
+			local customParams = weaponDef.customParams
 			if customParams and customParams.bogus then
-				Spring.Echo("bogus weapon!")
+				--Spring.Echo("bogus weapon!")
 				range = 0
-			end ]]
+			end 
 			--Spring.Echo("weaponNum: ".. weaponNum ..", name: " .. tableToString(weaponDef.name))
 		
-			local name = tostring(weaponDef.name)
+--[[ 			local name = tostring(weaponDef.name)
 			if string.find(name, "bogus") then
 				--Spring.Echo("bogus name found!")
 				range = 0
-			end
+			end ]]
 
 			local ringParams = {range, color[1],color[2], color[3], color[4],
 				fadeparams[1], fadeparams[2], fadeparams[3], fadeparams[4],
