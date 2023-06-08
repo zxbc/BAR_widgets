@@ -16,25 +16,25 @@ end
 ---------------------------------------------------------------------------------------------------------------------------
 -- Bindable action:   cursor_range_toggle
 ---------------------------------------------------------------------------------------------------------------------------
-local cursor_unit_range = true	-- displays the range of the unit at the mouse cursor (if there is one)
-local group_selection_fade_scale = 0.3 -- can set to 0 to have inner rings not dim at all with large group selection
+local cursor_unit_range = true    -- displays the range of the unit at the mouse cursor (if there is one)
+local group_selection_fade_scale = 0.35 -- can set to 0 to have inner rings not dim at all with large group selection
 
 -- alpha settings
-local outer_ring_alpha = 0.6	-- this is the outer edge formed by the stenciled rings
-local inner_ring_alpha = 0.15	-- this is the inner rings that overlap from each unit
-								-- note that units with multiple weapons also rely on this to display their short ranges
-								-- if you want to reduce clutter with large unit count, turn up group_selection_fade_scale
-local fill_alpha = 0.2		-- this is the solid color in the middle of the stencil
+local outer_ring_alpha = 0.88    -- this is the outer edge formed by the stenciled rings
+local inner_ring_alpha = 0.15    -- this is the inner rings that overlap from each unit
+                                -- note that units with multiple weapons also rely on this to display their short ranges
+                                -- if you want to reduce clutter with large unit count, turn up group_selection_fade_scale
+local fill_alpha = 0.12        -- this is the solid color in the middle of the stencil
 
 ---------------------------------------------------------------------------------------------------------------------------
 local show_selected_weapon_ranges = true
-local innerRingDim = 1	-- don't change this
+local innerRingDim = 1    -- don't change this
 
 ------------------ CONFIGURABLES --------------
 
 local buttonConfig = {
-	ally = { ground = true, air = true, nuke = true , nano = true},
-	enemy = { ground = true, air = true, nuke = true , nano = true}
+    ally = { ground = true, air = true, nuke = true , nano = true},
+    enemy = { ground = true, air = true, nuke = true , nano = true}
 }
 
 local colorConfig = { --An array of R, G, B, Alpha
@@ -46,14 +46,14 @@ local colorConfig = { --An array of R, G, B, Alpha
     distanceScaleEnd = 4000, -- Linewidth becomes 50% above this camera height
     ground = {
         color = {1.0, 0.2, 0.2, 1.0},
-        fadeparams = { 2000, 6000, 1.0, 0.0}, -- FadeStart, FadeEnd, StartAlpha, EndAlpha
+        fadeparams = { 2000, 10000, 1.0, 0.0}, -- FadeStart, FadeEnd, StartAlpha, EndAlpha
         externallinethickness = 3.0,
         internallinethickness = 2.0,
     },
     air = {
-        color = {0.2, 1.0, 0.2, 0.5},
+        color = {0.2, 1.0, 0.2, 1.0},
         fadeparams = { 2000, 6000, 0.4, 0.0}, -- FadeStart, FadeEnd, StartAlpha, EndAlpha
-        externallinethickness = 2.0,
+        externallinethickness = 3.0,
         internallinethickness = 2.0,
     },
     nuke = {
@@ -63,17 +63,17 @@ local colorConfig = { --An array of R, G, B, Alpha
         internallinethickness = 2.0,
     },
     cannon = {
-        color = {1.0, 0.2, 0.0, 1.0},
-        fadeparams = {3000, 6000, 1.0, 0.0}, -- FadeStart, FadeEnd, StartAlpha, EndAlpha
-        externallinethickness = 3.0,
-        internallinethickness = 2.0,
+        color = {1.0, 0.22, 0.05, 1.0},
+        fadeparams = {3000, 10000, 1.0, 0.0}, -- FadeStart, FadeEnd, StartAlpha, EndAlpha
+        externallinethickness = 3.5,
+        internallinethickness = 1.5,
     },
-	nano = {
-		color = {0.2, 1.0, 0.2, 0.5},
-		fadeparams = {2000, 6000, 0.4, 0.0}, -- FadeStart, FadeEnd, StartAlpha, EndAlpha
+        nano = {
+                color = {0.2, 1.0, 0.2, 0.5},
+                fadeparams = {2000, 6000, 0.4, 0.0}, -- FadeStart, FadeEnd, StartAlpha, EndAlpha
         externallinethickness = 2.0,
         internallinethickness = 1.0,
-	},
+        },
 }
 
 ----------------------------------
@@ -140,7 +140,28 @@ local function tableToString(t)
   
     return "{" .. result:sub(1, -3) .. "}"
 end
+local function dumpToFile(obj, prefix, filename)
+    local file = assert(io.open(filename, "w"))
+    if type(obj) == "table" then
+        for k, v in pairs(obj) do
+            local key = prefix and (prefix .. "." .. tostring(k)) or tostring(k)
+            if type(v) == "function" then
+                local info = debug.getinfo(v, "S")
+                file:write(key .. " (function) defined in " .. info.source .. " at line " .. info.linedefined .. "\n")
+            elseif type(v) == "table" then
+                file:write(key .. " (table):\n")
+                dumpToFile(v, key, filename)
+            else
+                file:write(key .. " = " .. tostring(v) .. "\n")
+            end
+        end
+    end
+    if type(obj) == "string" then
+        file:write(obj)
+    end
 
+    file:close()
+end
 local function initializeUnitDefRing(unitDefID)
 
 	local weapons = UnitDefs[unitDefID].weapons
@@ -172,6 +193,14 @@ local function initializeUnitDefRing(unitDefID)
 			local isCylinder = 1
 			if weaponType == 1 or weaponType == 4 then -- all non-cannon ground weapons are spheres, aa and antinuke are cyls
 				isCylinder = 0
+			end
+
+			--Spring.Echo("weaponNum: ".. weaponNum ..", name: " .. weaponDef.name)
+
+			local name = tostring(weaponDef.name)
+			if string.find(name, "bogus") then
+				--Spring.Echo("bogus name found!")
+				range = 0
 			end
 
 			local ringParams = {range, color[1],color[2], color[3], color[4],
@@ -263,6 +292,7 @@ local GL_STENCIL_BUFFER_BIT = GL.STENCIL_BUFFER_BIT
 local GL_TRIANGLE_FAN 		= GL.TRIANGLE_FAN
 local GL_LEQUAL 			= GL.LEQUAL
 local GL_LINE_LOOP			= GL.LINE_LOOP
+local GL_NOTEQUAL			= GL.NOTEQUAL
 
 local GL_KEEP = 0x1E00 --GL.KEEP
 local GL_REPLACE = GL.REPLACE --GL.KEEP
@@ -560,7 +590,7 @@ local vsSrc = [[
 		vec4 losTexSample = texture(losTex, vec2(circleWorldPos.x / mapSize.z, circleWorldPos.z / mapSize.w)); // lostex is PO2
 		float inlos = dot(losTexSample.rgb,vec3(0.33));
 		inlos = clamp(inlos*5 -1.4	, 0.5,1.0); // fuck if i know why, but change this if LOSCOLORS are changed!
-		blendedcolor.rgb *= inlos;
+		//blendedcolor.rgb *= inlos;
 	
 		// --- YES FOG
 		float fogDist = length((cameraView * vec4(circleWorldPos.xyz,1.0)).xyz);
@@ -702,14 +732,14 @@ local function AddSelectedUnit(unitID, mouseover)
 		local unitIsOnOff = spFindUnitCmdDesc(unitID, 85) ~= nil	-- if this unit can toggle weapons
 
 		local allystring = alliedUnit and "ally" or "enemy"
-		if not unitIsOnOff or (unitIsOnOff and drawIt) then
+		local ringParams = unitDefRings[unitDef.id]['rings'][j]
+		if not unitIsOnOff or (unitIsOnOff and drawIt) or ringParams[1] > 0 then
 			--local weaponType = unitDefRings[unitDefID]['weapons'][weaponNum]
 			cacheTable[1] = mpx
 			cacheTable[2] = mpy
 			cacheTable[3] = mpz
 			local vaokey = allystring ..weaponTypeToString[weaponType]
 
-			local ringParams = unitDefRings[unitDef.id]['rings'][j]
 			for i = 1,13 do
 				cacheTable[i+3] = ringParams[i]
 			end
@@ -861,7 +891,7 @@ function widget:Update(dt)
 		if innerRingDim ~= 0 then
 			local numUnitsSelected = #selectedUnits
 			if numUnitsSelected == 0 then numUnitsSelected = 1 end
-			if numUnitsSelected > 20 then numUnitsSelected = 20 end
+			if numUnitsSelected > 25 then numUnitsSelected = 25 end
 			innerRingDim = group_selection_fade_scale * 0.1 * numUnitsSelected
 		end
 
@@ -949,7 +979,7 @@ local function DRAWRINGS(primitiveType, linethickness)
 					glLineWidth(colorConfig[wt][linethickness] * cameraHeightFactor)
 				end
 				glStencilMask(stencilMask)  -- only allow these bits to get written
-				glStencilFunc(GL.NOTEQUAL, stencilMask, stencilMask) -- what to do with the stencil
+				glStencilFunc(GL_NOTEQUAL, stencilMask, stencilMask) -- what to do with the stencil
 				iT.VAO:DrawArrays(primitiveType,iT.numVertices,0,iT.usedElements,0) -- +1!!!
 			end
 		end
@@ -1015,7 +1045,7 @@ function widget:DrawWorldPreUnit()
 				drawDim = colorConfig.internalalpha / innerRingDim
 				if drawDim > 1.0 then drawDim = 1.0 end
 			end
-			attackRangeShader:SetUniform("lineAlphaUniform", math.min(drawDim, colorConfig.internalalpha))
+			attackRangeShader:SetUniform("lineAlphaUniform", math.min(colorConfig.internalalpha, drawDim))
 			attackRangeShader:SetUniform("drawAlpha", drawDim)
 			DRAWRINGS(GL_LINE_LOOP, 'internallinethickness') -- DRAW THE INNER RINGS
 		end
