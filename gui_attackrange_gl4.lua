@@ -8,7 +8,7 @@ function widget:GetInfo()
 		date      = "June 2023",
 		version   = "1.0",
 		license   = "GPLv2",
-		layer     = -100,
+		layer     = 9999,
 		enabled   = true,
 		handler   = true,
 	}
@@ -25,7 +25,7 @@ local inner_ring_alpha = 0.15    -- this is the inner rings that overlap from ea
                                 -- note that units with multiple weapons also rely on this to display their short ranges
                                 -- if you want to reduce clutter with large unit count, turn up group_selection_fade_scale
 local fill_alpha = 0.12        -- this is the solid color in the middle of the stencil
-
+local outer_fade_height_difference = 2000
 ---------------------------------------------------------------------------------------------------------------------------
 local show_selected_weapon_ranges = true
 local innerRingDim = 1    -- don't change this
@@ -46,13 +46,13 @@ local colorConfig = { --An array of R, G, B, Alpha
     distanceScaleEnd = 4000, -- Linewidth becomes 50% above this camera height
     ground = {
         color = {1.0, 0.2, 0.2, 1.0},
-        fadeparams = { 2000, 6000, 1.0, 0.0}, -- FadeStart, FadeEnd, StartAlpha, EndAlpha
+        fadeparams = { 2000, 4000, 1.0, 0.0}, -- FadeStart, FadeEnd, StartAlpha, EndAlpha
         externallinethickness = 3.0,
         internallinethickness = 2.0,
     },
     air = {
         color = {0.2, 1.0, 0.2, 1.0},
-        fadeparams = { 2000, 6000, 0.4, 0.0}, -- FadeStart, FadeEnd, StartAlpha, EndAlpha
+        fadeparams = { 2000, 4000, 0.4, 0.0}, -- FadeStart, FadeEnd, StartAlpha, EndAlpha
         externallinethickness = 3.0,
         internallinethickness = 2.0,
     },
@@ -64,16 +64,16 @@ local colorConfig = { --An array of R, G, B, Alpha
     },
     cannon = {
         color = {1.0, 0.22, 0.05, 1.0},
-        fadeparams = {3000, 6000, 1.0, 0.0}, -- FadeStart, FadeEnd, StartAlpha, EndAlpha
+        fadeparams = {3000, 4000, 1.0, 0.0}, -- FadeStart, FadeEnd, StartAlpha, EndAlpha
         externallinethickness = 3.5,
         internallinethickness = 1.5,
     },
-        nano = {
-                color = {0.2, 1.0, 0.2, 0.5},
-                fadeparams = {2000, 6000, 0.4, 0.0}, -- FadeStart, FadeEnd, StartAlpha, EndAlpha
-        externallinethickness = 2.0,
-        internallinethickness = 1.0,
-        },
+		nano = {
+			color = {0.2, 1.0, 0.2, 0.5},
+			fadeparams = {2000, 6000, 0.4, 0.0}, -- FadeStart, FadeEnd, StartAlpha, EndAlpha
+			externallinethickness = 2.0,
+			internallinethickness = 1.0,
+		},
 }
 
 ----------------------------------
@@ -417,6 +417,7 @@ local vsSrc = [[
 	
 	uniform float lineAlphaUniform = 1.0;
 	uniform float cannonmode = 0.0;
+	uniform float fadeDistOffset = 0.0;
 	
 	uniform sampler2D heightmapTex;
 	uniform sampler2D losTex; // hmm maybe?
@@ -575,7 +576,7 @@ local vsSrc = [[
 		float distToCam = length(modelWorldPos.xyz - camPos.xyz); //dist from cam
 		// FadeStart, FadeEnd, StartAlpha, EndAlpha
 		float fadeDist = visibility.y - visibility.x;
-		FADEALPHA  = clamp((visibility.y - distToCam)/(fadeDist),0,1);//,visibility.z,visibility.w);
+		FADEALPHA  = clamp((visibility.y + fadeDistOffset - distToCam)/(fadeDist),0,1);//,visibility.z,visibility.w);
 	
 		//--- Optimize by anything faded out getting transformed back to origin with 0 range?
 		//seems pretty ok!
@@ -585,8 +586,8 @@ local vsSrc = [[
 	
 		if (cannonmode > 0.5){
 		// cannons should fade distance based on their range
-			float cvmin = max(visibility.x, 2* RANGE);
-			float cvmax = max(visibility.y, 4* RANGE);
+			float cvmin = max(visibility.x+fadeDistOffset, 2* RANGE);
+			float cvmax = max(visibility.y+fadeDistOffset, 4* RANGE);
 			//FADEALPHA = clamp((cvmin - distToCam)/(cvmax - cvmin + 1.0),visibility.z,visibility.w);
 		}
 	
@@ -1031,12 +1032,14 @@ function widget:DrawWorldPreUnit()
 
 			attackRangeShader:Activate()
 			attackRangeShader:SetUniform("drawAlpha", fill_alpha)
+			attackRangeShader:SetUniform("fadeDistOffset", outer_fade_height_difference)
 			DRAWRINGS(GL_TRIANGLE_FAN) -- FILL THE CIRCLES
 			--glLineWidth(math.max(0.1,4 + math.sin(gameFrame * 0.04) * 10))
 			glColorMask(true, true, true, true)	-- re-enable color drawing
 			glStencilMask(0)
 
 			attackRangeShader:SetUniform("lineAlphaUniform",colorConfig.externalalpha)
+
 			glDepthTest(GL_LEQUAL) -- test for depth on these outside cases
 			
 			attackRangeShader:SetUniform("drawAlpha", 1.0)
@@ -1053,6 +1056,7 @@ function widget:DrawWorldPreUnit()
 			end
 			attackRangeShader:SetUniform("lineAlphaUniform", math.min(colorConfig.internalalpha, drawDim))
 			attackRangeShader:SetUniform("drawAlpha", drawDim)
+			attackRangeShader:SetUniform("fadeDistOffset", 0)
 			DRAWRINGS(GL_LINE_LOOP, 'internallinethickness') -- DRAW THE INNER RINGS
 		end
 
