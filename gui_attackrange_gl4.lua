@@ -46,7 +46,7 @@ local colorConfig = { --An array of R, G, B, Alpha
     distanceScaleEnd = 4000, -- Linewidth becomes 50% above this camera height
     ground = {
         color = {1.0, 0.2, 0.2, 1.0},
-        fadeparams = { 2000, 10000, 1.0, 0.0}, -- FadeStart, FadeEnd, StartAlpha, EndAlpha
+        fadeparams = { 2000, 6000, 1.0, 0.0}, -- FadeStart, FadeEnd, StartAlpha, EndAlpha
         externallinethickness = 3.0,
         internallinethickness = 2.0,
     },
@@ -64,7 +64,7 @@ local colorConfig = { --An array of R, G, B, Alpha
     },
     cannon = {
         color = {1.0, 0.22, 0.05, 1.0},
-        fadeparams = {3000, 10000, 1.0, 0.0}, -- FadeStart, FadeEnd, StartAlpha, EndAlpha
+        fadeparams = {3000, 6000, 1.0, 0.0}, -- FadeStart, FadeEnd, StartAlpha, EndAlpha
         externallinethickness = 3.5,
         internallinethickness = 1.5,
     },
