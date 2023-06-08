@@ -190,13 +190,19 @@ local function initializeUnitDefRing(unitDefID)
 			local color = colorConfig[weaponTypeMap[weaponType]].color
 			local fadeparams =  colorConfig[weaponTypeMap[weaponType]].fadeparams
 
-			local isCylinder = 1
-			if weaponType == 1 or weaponType == 4 then -- all non-cannon ground weapons are spheres, aa and antinuke are cyls
-				isCylinder = 0
+			local isCylinder = 0
+ 			if weaponDef.cylinderTargeting and weaponDef.cylinderTargeting > 0 then -- all non-cannon ground weapons are spheres, aa and antinuke are cyls
+				isCylinder = 1
+				Spring.Echo("cylinder weapon found!")
 			end
 
-			--Spring.Echo("weaponNum: ".. weaponNum ..", name: " .. weaponDef.name)
-
+--[[ 			local customParams = weaponDef.customParams
+			if customParams and customParams.bogus then
+				Spring.Echo("bogus weapon!")
+				range = 0
+			end ]]
+			--Spring.Echo("weaponNum: ".. weaponNum ..", name: " .. tableToString(weaponDef.name))
+		
 			local name = tostring(weaponDef.name)
 			if string.find(name, "bogus") then
 				--Spring.Echo("bogus name found!")
