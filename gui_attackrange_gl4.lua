@@ -16,6 +16,7 @@ end
 ---------------------------------------------------------------------------------------------------------------------------
 -- Bindable action:   cursor_range_toggle
 ---------------------------------------------------------------------------------------------------------------------------
+local shift_only = false	-- only show ranges when shift is held down
 local cursor_unit_range = true    -- displays the range of the unit at the mouse cursor (if there is one)
 local group_selection_fade_scale = 0.35 -- can set to 0 to have inner rings not dim at all with large group selection
 
@@ -193,7 +194,7 @@ local function initializeUnitDefRing(unitDefID)
 			local isCylinder = 0
  			if weaponDef.cylinderTargeting and weaponDef.cylinderTargeting > 0 then -- all non-cannon ground weapons are spheres, aa and antinuke are cyls
 				isCylinder = 1
-				Spring.Echo("cylinder weapon found!")
+				--Spring.Echo("cylinder weapon found!")
 			end
 
 			local customParams = weaponDef.customParams
@@ -202,12 +203,6 @@ local function initializeUnitDefRing(unitDefID)
 				range = 0
 			end 
 			--Spring.Echo("weaponNum: ".. weaponNum ..", name: " .. tableToString(weaponDef.name))
-		
---[[ 			local name = tostring(weaponDef.name)
-			if string.find(name, "bogus") then
-				--Spring.Echo("bogus name found!")
-				range = 0
-			end ]]
 
 			local ringParams = {range, color[1],color[2], color[3], color[4],
 				fadeparams[1], fadeparams[2], fadeparams[3], fadeparams[4],
@@ -310,6 +305,8 @@ local spGetUnitAllyTeam		= Spring.GetUnitAllyTeam
 local spFindUnitCmdDesc		= Spring.FindUnitCmdDesc
 local spGetMouseState 		= Spring.GetMouseState
 local spTraceScreenRay		= Spring.TraceScreenRay
+local GetModKeyState		= Spring.GetModKeyState
+local GetInvertQueueKey		= Spring.GetInvertQueueKey
 
 local chobbyInterface
 
@@ -882,12 +879,61 @@ function widget:Initialize()
 
 	selectedUnits = Spring.GetSelectedUnits()
 	updateSelection = true
+	local _, _, _, shift = GetModKeyState()
+	if shift_only and not shift then
+		toggle(false)
+	end
 end
 
 local gameFrame = 0
 
 function widget:GameFrame(gf)
 	gameFrame = gf
+end
+
+local function GetModKeys()
+    local alt, ctrl, meta, shift = GetModKeyState()
+  
+    if GetInvertQueueKey() then -- Shift inversion
+        shift = not shift
+    end
+  
+    return alt, ctrl, meta, shift
+end
+
+local function RefreshSelectedUnits()
+	local newSelUnits = {}
+	for i, unitID in ipairs(selectedUnits) do
+		newSelUnits[unitID] = true
+		if not selUnits[unitID] then
+			AddSelectedUnit(unitID)
+		end
+	end
+	for unitID, _ in pairs(selUnits) do
+		if not newSelUnits[unitID] then
+			RemoveSelectedUnit(unitID)
+		end
+	end
+	selUnits = newSelUnits
+end
+
+function toggle(on)
+	show_selected_weapon_ranges = on
+	updateSelection = true
+	RefreshSelectedUnits()
+end
+
+function widget:KeyPress(key, mods, isRepeat)
+	if key == 304 then
+		if shift_only then toggle(true) end
+		return
+	end
+end
+
+function widget:KeyRelease(key, mods, isRepeat)
+	if key == 304 then
+		if shift_only then toggle(false) end
+	end
 end
 
 function widget:Update(dt)
@@ -902,24 +948,13 @@ function widget:Update(dt)
 			innerRingDim = group_selection_fade_scale * 0.1 * numUnitsSelected
 		end
 
-		local newSelUnits = {}
 		-- add to selection
-		for i, unitID in ipairs(selectedUnits) do
-			newSelUnits[unitID] = true
-			if not selUnits[unitID] then
-				AddSelectedUnit(unitID)
-			end
+		if show_selected_weapon_ranges then
+			RefreshSelectedUnits()
 		end
-		-- remove from selection
-		for unitID, _ in pairs(selUnits) do
-			if not newSelUnits[unitID] then
-				RemoveSelectedUnit(unitID)
-			end
-		end
-		selUnits = newSelUnits
 	end
 
-	if cursor_unit_range and gameFrame % 3 == 1 then
+	if show_selected_weapon_ranges and cursor_unit_range and gameFrame % 3 == 0 then
         local mx, my = spGetMouseState()
         local desc, args = spTraceScreenRay(mx, my, false)
         local mUnitID
@@ -973,6 +1008,7 @@ end
 
 local groundnukeair = {"ground","air","nuke","nano"}
 local function DRAWRINGS(primitiveType, linethickness)
+	if not show_selected_weapon_ranges then return end
 	local stencilMask
 	attackRangeShader:SetUniform("cannonmode",0)
 	for i,allyState in ipairs(allyenemypairs) do
