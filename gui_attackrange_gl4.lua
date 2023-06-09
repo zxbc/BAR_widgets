@@ -26,7 +26,7 @@ local inner_ring_alpha = 0.15    -- this is the inner rings that overlap from ea
                                 -- note that units with multiple weapons also rely on this to display their short ranges
                                 -- if you want to reduce clutter with large unit count, turn up group_selection_fade_scale
 local fill_alpha = 0.12        -- this is the solid color in the middle of the stencil
-local outer_fade_height_difference = 2000
+local outer_fade_height_difference = 1500
 ---------------------------------------------------------------------------------------------------------------------------
 local show_selected_weapon_ranges = true
 local innerRingDim = 1    -- don't change this
@@ -34,54 +34,48 @@ local innerRingDim = 1    -- don't change this
 ------------------ CONFIGURABLES --------------
 
 local buttonConfig = {
-    ally = { ground = true, air = true, nuke = true , nano = true},
-    enemy = { ground = true, air = true, nuke = true , nano = true}
+    ally = { ground = true, nuke = true , nano = true},
+    enemy = { ground = true, nuke = true , nano = true}
 }
 
 local colorConfig = { --An array of R, G, B, Alpha
     drawStencil = true, -- wether to draw the outer, merged rings (quite expensive!)
-    drawInnerRings = true, -- wether to draw inner, per defense rings (very cheap)
+    drawInnerRings = true, -- wether to draw inner, per attack rings (very cheap)
     externalalpha = outer_ring_alpha, -- alpha of outer rings
     internalalpha = inner_ring_alpha, -- alpha of inner rings
     distanceScaleStart = 2000, -- Linewidth is 100% up to this camera height
     distanceScaleEnd = 4000, -- Linewidth becomes 50% above this camera height
     ground = {
         color = {1.0, 0.2, 0.2, 1.0},
-        fadeparams = { 2000, 4000, 1.0, 0.0}, -- FadeStart, FadeEnd, StartAlpha, EndAlpha
+        fadeparams = { 2000, 3500, 1.0, 0.1}, -- FadeStart, FadeEnd, StartAlpha, EndAlpha
         externallinethickness = 3.0,
         internallinethickness = 2.0,
     },
-    air = {
-        color = {0.2, 1.0, 0.2, 1.0},
-        fadeparams = { 2000, 4000, 0.4, 0.0}, -- FadeStart, FadeEnd, StartAlpha, EndAlpha
+    nano = {
+        color = {0.2, 1.0, 0.2, 0.5},
+        fadeparams = { 2000, 3500, 0.9, 0.1}, -- FadeStart, FadeEnd, StartAlpha, EndAlpha
         externallinethickness = 3.0,
         internallinethickness = 2.0,
     },
     nuke = {
         color = {0.7, 0.8, 1.0, 1.0},
-        fadeparams = {5000, 4000, 0.6, 0.0}, -- FadeStart, FadeEnd, StartAlpha, EndAlpha
+        fadeparams = {5000, 3500, 0.6, 0.1}, -- FadeStart, FadeEnd, StartAlpha, EndAlpha
         externallinethickness = 4.0,
         internallinethickness = 2.0,
     },
     cannon = {
         color = {1.0, 0.22, 0.05, 1.0},
-        fadeparams = {3000, 4000, 1.0, 0.0}, -- FadeStart, FadeEnd, StartAlpha, EndAlpha
+        fadeparams = {3000, 3500, 1.0, 0.1}, -- FadeStart, FadeEnd, StartAlpha, EndAlpha
         externallinethickness = 3.5,
         internallinethickness = 1.5,
     },
-		nano = {
-			color = {0.2, 1.0, 0.2, 0.5},
-			fadeparams = {2000, 6000, 0.4, 0.0}, -- FadeStart, FadeEnd, StartAlpha, EndAlpha
-			externallinethickness = 2.0,
-			internallinethickness = 1.0,
-		},
 }
 
 ----------------------------------
 
-local buttonconfigmap ={'ground','air','nuke','ground','nano'}
+local buttonconfigmap ={'ground','nano','nuke','ground'}
 local DEBUG = false --generates debug message
-local weaponTypeMap = {'ground','air','nuke','cannon','nano'}
+local weaponTypeMap = {'ground','nano','nuke','cannon'}
 
 local unitDefRings = {} --each entry should be  a unitdefIDkey to very specific table:
 	-- a list of tables, ideally ranged from 0 where
@@ -92,11 +86,6 @@ local mobileAntiUnitDefs = {
 	[UnitDefNames.cormabm.id ] = true,
 	[UnitDefNames.corcarry.id] = true,
 }
-
-local defensePosHash = {} -- key: {poshash=unitID}
--- poshash is 4096 * posx/8 + posz/8
-
-local featureDefIDtoUnitDefID = {} -- this table maps featureDefIDs to unitDefIDs for faster lookups on feature creation
 
 local vtoldamagetag = Game.armorTypes['vtol']
 local defaultdamagetag = Game.armorTypes['default']
@@ -197,11 +186,10 @@ local function initializeUnitDefRing(unitDefID)
 				--Spring.Echo("cylinder weapon found!")
 			end
 
-			local customParams = weaponDef.customParams
-			if customParams and customParams.bogus then
+			if (weaponDef.customParams and weaponDef.customParams.bogus) or (wDef.type == "AircraftBomb") then
 				--Spring.Echo("bogus weapon!")
 				range = 0
-			end 
+			end
 			--Spring.Echo("weaponNum: ".. weaponNum ..", name: " .. tableToString(weaponDef.name))
 
 			local ringParams = {range, color[1],color[2], color[3], color[4],
@@ -218,8 +206,8 @@ local function initializeUnitDefRing(unitDefID)
 	local unitDef = UnitDefs[unitDefID]
 	if unitDef.isBuilder then
 		local range = unitDef.buildDistance
-		local color = colorConfig['air'].color
-		local fadeparams = colorConfig['air'].fadeparams
+		local color = colorConfig['nano'].color
+		local fadeparams = colorConfig['nano'].fadeparams
 		local ringParams = {range, color[1],color[2], color[3], color[4],
 			fadeparams[1], fadeparams[2], fadeparams[3], fadeparams[4],
 			1,
@@ -322,7 +310,7 @@ function widget:TextCommand(command)
 			ally = 'enemy'
 		end
 		if string.find(command, "air", nil, true) then
-			rangetype = 'air'
+			rangetype = 'nano'
 		elseif string.find(command, "nuke", nil, true) then
 			rangetype = 'nuke'
 		end
@@ -330,7 +318,7 @@ function widget:TextCommand(command)
 			enabled = true
 		end
 		buttonConfig[ally][rangetype]=enabled
-		Spring.Echo("Range visibility of "..ally.." "..rangetype.." defenses set to",enabled)
+		Spring.Echo("Range visibility of "..ally.." "..rangetype.." attacks set to",enabled)
 		return true
 	end
 
@@ -346,10 +334,10 @@ local largeCircleSegments = 512
 local smallCircleVBO = nil
 local smallCircleSegments = 128
 
-local weaponTypeToString = {"ground","air","nuke","cannon","nano"}
+local weaponTypeToString = {"ground","nano","nuke","cannon",}
 local allyenemypairs = {"ally","enemy"}
-local defenseRangeClasses = {'enemyair','enemyground','enemynuke','enemynano', 'allyair','allyground','allynuke','enemycannon','allycannon','allynano'}
-local defenseRangeVAOs = {}
+local attackRangeClasses = {'enemyground','enemynuke','enemynano', 'allyground','allynuke','enemycannon','allycannon','allynano'}
+local attackRangeVAOs = {}
 
 local circleInstanceVBOLayout = {
 		  {id = 1, name = 'posscale', size = 4}, -- a vec4 for pos + scale
@@ -366,7 +354,7 @@ local attackRangeShader = nil
 
 
 local function goodbye(reason)
-  Spring.Echo("DefenseRange GL4 widget exiting with reason: "..reason)
+  Spring.Echo("AttackRange GL4 widget exiting with reason: "..reason)
   widgetHandler:RemoveWidget()
 end
 
@@ -758,7 +746,8 @@ local function AddSelectedUnit(unitID, mouseover)
 				end
 			end
 			local instanceID = 10000000 * (mouseover and 1 or 0) + 1000000 * weaponType + unitID + 100000 * j -- weapon index needs to be included here for uniqueness
-			pushElementInstance(defenseRangeVAOs[vaokey], cacheTable, instanceID, true,  false, unitID)
+			pushElementInstance(attackRangeVAOs
+		[vaokey], cacheTable, instanceID, true,  false, unitID)
 			addedrings = addedrings + 1
 			if collections[unitID] == nil then
 				--lazy creation
@@ -778,13 +767,14 @@ local function RemoveSelectedUnit(unitID, mouseover)
 	local collections = selections
 	if mouseover then collections = mouseovers end
 
-	-- we have to check to make sure this is a selection unit and not a defense unit
+	-- we have to check to make sure this is a selection unit and not an attack unit
 	if collections[unitID] then
 		local collection = collections[unitID]
 		if not collection then return end
 		for instanceKey,vaoKey in pairs(collection.vaokeys) do
 			--Spring.Echo(vaoKey,instanceKey)
-			popElementInstance(defenseRangeVAOs[vaoKey],instanceKey)
+			popElementInstance(attackRangeVAOs
+		[vaoKey],instanceKey)
 		end
 		collections[unitID] = nil
 		--Spring.Echo("removed rings from unitID: "..tostring(unitID))
@@ -828,17 +818,25 @@ end
 local function initGL4()
 	smallCircleVBO = makeCircleVBO(smallCircleSegments)
 	largeCircleVBO = makeCircleVBO(largeCircleSegments)
-	for i,defRangeClass in ipairs(defenseRangeClasses) do
-		defenseRangeVAOs[defRangeClass] = makeInstanceVBOTable(circleInstanceVBOLayout,16,defRangeClass, 5) -- 5 is unitIDattribID (instData)
-		if defRangeClass:find("cannon", nil, true) or defRangeClass:find("nuke", nil, true) then
-			defenseRangeVAOs[defRangeClass].vertexVBO = largeCircleVBO
-			defenseRangeVAOs[defRangeClass].numVertices = largeCircleSegments
+	for i,atkRangeClass in ipairs(attackRangeClasses) do
+		attackRangeVAOs
+	[atkRangeClass] = makeInstanceVBOTable(circleInstanceVBOLayout,16,atkRangeClass, 5) -- 5 is unitIDattribID (instData)
+		if atkRangeClass:find("cannon", nil, true) or atkRangeClass:find("nuke", nil, true) then
+			attackRangeVAOs
+		[atkRangeClass].vertexVBO = largeCircleVBO
+			attackRangeVAOs
+		[atkRangeClass].numVertices = largeCircleSegments
 		else
-			defenseRangeVAOs[defRangeClass].vertexVBO = smallCircleVBO
-			defenseRangeVAOs[defRangeClass].numVertices = smallCircleSegments
+			attackRangeVAOs
+		[atkRangeClass].vertexVBO = smallCircleVBO
+			attackRangeVAOs
+		[atkRangeClass].numVertices = smallCircleSegments
 		end
-		local newVAO = makeVAOandAttach(defenseRangeVAOs[defRangeClass].vertexVBO,defenseRangeVAOs[defRangeClass].instanceVBO)
-		defenseRangeVAOs[defRangeClass].VAO = newVAO
+		local newVAO = makeVAOandAttach(attackRangeVAOs
+	[atkRangeClass].vertexVBO,attackRangeVAOs
+	[atkRangeClass].instanceVBO)
+		attackRangeVAOs
+	[atkRangeClass].VAO = newVAO
 	end
 	return makeShaders()
 end
@@ -860,12 +858,12 @@ function widget:Initialize()
 --[[ 	WG['defrange'] = {}
 	for _,ae in ipairs({'ally','enemy'}) do
 		local Ae = string.upper(string.sub(ae, 1, 1)) .. string.sub(ae, 2)
-		for _,wt in ipairs({'ground','air','nuke'}) do
+		for _,wt in ipairs({'ground','nano','nuke'}) do
 			local Wt = string.upper(string.sub(wt, 1, 1)) .. string.sub(wt, 2)
 			WG['defrange']['get'..Ae..Wt] = function() return buttonConfig[ae][wt] end
 			WG['defrange']['set'..Ae..Wt] = function(value)
 				buttonConfig[ae][wt] = value
-				Spring.Echo(string.format("Defense Range GL4 Setting %s%s to %s",Ae,Wt, value and 'on' or 'off'))
+				Spring.Echo(string.format("Attack Range GL4 Setting %s%s to %s",Ae,Wt, value and 'on' or 'off'))
 				if WG['unittrackerapi'] and WG['unittrackerapi'].visibleUnits then
 					widget:VisibleUnitsChanged(WG['unittrackerapi'].visibleUnits, nil)
 				end
@@ -881,7 +879,7 @@ function widget:Initialize()
 	updateSelection = true
 	local _, _, _, shift = GetModKeyState()
 	if shift_only and not shift then
-		toggle(false)
+		Toggle(false)
 	end
 end
 
@@ -917,7 +915,7 @@ local function RefreshSelectedUnits()
 	selUnits = newSelUnits
 end
 
-function toggle(on)
+function Toggle(on)
 	show_selected_weapon_ranges = on
 	updateSelection = true
 	RefreshSelectedUnits()
@@ -925,14 +923,14 @@ end
 
 function widget:KeyPress(key, mods, isRepeat)
 	if key == 304 then
-		if shift_only then toggle(true) end
+		if shift_only then Toggle(true) end
 		return
 	end
 end
 
 function widget:KeyRelease(key, mods, isRepeat)
 	if key == 304 then
-		if shift_only then toggle(false) end
+		if shift_only then Toggle(false) end
 	end
 end
 
@@ -1006,15 +1004,16 @@ local function GetCameraHeightFactor() -- returns a smoothstepped value between 
 	return 1
 end
 
-local groundnukeair = {"ground","air","nuke","nano"}
+local groundnukeair = {"ground","nano","nuke"}
 local function DRAWRINGS(primitiveType, linethickness)
 	if not show_selected_weapon_ranges then return end
 	local stencilMask
 	attackRangeShader:SetUniform("cannonmode",0)
 	for i,allyState in ipairs(allyenemypairs) do
 		for j, wt in ipairs(groundnukeair) do
-			local defRangeClass = allyState..wt
-			local iT = defenseRangeVAOs[defRangeClass]
+			local atkRangeClass = allyState..wt
+			local iT = attackRangeVAOs
+		[atkRangeClass]
 			stencilMask = 2 ^ ( 4 * (i-1) + (j-1)) -- from 1 to 128
 			drawcounts[stencilMask] = iT.usedElements
 			if iT.usedElements > 0 and buttonConfig[allyState][wt] then
@@ -1030,8 +1029,9 @@ local function DRAWRINGS(primitiveType, linethickness)
 
 	attackRangeShader:SetUniform("cannonmode",1)
 	for i,allyState in ipairs(allyenemypairs) do
-		local defRangeClass = allyState.."cannon"
-		local iT = defenseRangeVAOs[defRangeClass]
+		local atkRangeClass = allyState.."cannon"
+		local iT = attackRangeVAOs
+	[atkRangeClass]
 		stencilMask = 2 ^ ( 4 * (i-1) + 3)
 		drawcounts[stencilMask] = iT.usedElements
 		if iT.usedElements > 0 and buttonConfig[allyState]["ground"] then
@@ -1046,9 +1046,7 @@ local function DRAWRINGS(primitiveType, linethickness)
 end
 
 function widget:DrawWorldPreUnit()
-	--if fullview and not enabledAsSpec then
-	--	return
-	--end
+
 	if chobbyInterface then return end
 	if not Spring.IsGUIHidden() and (not WG['topbar'] or not WG['topbar'].showingQuit()) then
 		cameraHeightFactor = GetCameraHeightFactor() * 0.5 + 0.5
@@ -1108,19 +1106,6 @@ function widget:DrawWorldPreUnit()
 		end
 	end
 end
-
---- SHIT THAT NEEDS TO BE IN CONFIG:
-
--- ALLY/ENEMY
--- AIR/NUKE/GROUND
--- OPACITY
--- ENABLE IN SPEC MODE
--- LINEWIDTH
--- internalrings
--- nostencil mode
-
-
-
 
 --SAVE / LOAD CONFIG FILE
 function widget:GetConfigData()
