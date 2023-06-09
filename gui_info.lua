@@ -1807,12 +1807,16 @@ function checkChanges()
 	local prevDisplayUnitID = displayUnitID
 
 	-- determine what mode to display
---[[ 	displayMode = 'text'
-	displayUnitID = nil
-	displayUnitDefID = nil ]]
+	local _, _, _, shift = spGetModKeyState()
+	if shift then
+		displayMode = 'text'
+		displayUnitID = nil
+		displayUnitDefID = nil
+	end
 
 	-- buildmenu unitdef
 	if WG['buildmenu'] and (WG['buildmenu'].hoverID or WG['buildmenu'].selectedID) then
+		displayUnitID = nil
 		displayMode = 'unitdef'
 		displayUnitDefID = WG['buildmenu'].hoverID or WG['buildmenu'].selectedID
 
