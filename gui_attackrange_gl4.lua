@@ -186,7 +186,7 @@ local function initializeUnitDefRing(unitDefID)
 				--Spring.Echo("cylinder weapon found!")
 			end
 
-			if (weaponDef.customParams and weaponDef.customParams.bogus) or (wDef.type == "AircraftBomb") then
+			if (weaponDef.customParams and weaponDef.customParams.bogus) or (weaponDef.type == "AircraftBomb") then
 				--Spring.Echo("bogus weapon!")
 				range = 0
 			end
@@ -644,6 +644,7 @@ local vsSrc = [[
 
 local cacheTable = {}
 for i=1,20 do cacheTable[i] = 0 end
+
 
 -- code for selected units start here
 
