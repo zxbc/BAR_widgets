@@ -8,7 +8,7 @@ function widget:GetInfo()
 		date      = "June 2023",
 		version   = "1.0",
 		license   = "GPLv2",
-		layer     = 9999,
+		layer     = -100,
 		enabled   = true,
 		handler   = true,
 	}
