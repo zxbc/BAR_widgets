@@ -1044,23 +1044,26 @@ function widget:Update(dt)
 	end
 
 	if show_selected_weapon_ranges and cursor_unit_range and gameFrame % 3 == 1 then
-        local mx, my = spGetMouseState()
-        local desc, args = spTraceScreenRay(mx, my, false)
-        local mUnitID
-        if desc and desc == "unit" then
-            mUnitID = args
-        else
-            mUnitID = nil
+        local mx, my, _, mmb, _, mouseOffScreen, cameraPanMode = spGetMouseState()
+		if  mouseOffScreen or mmb or cameraPanMode then return end
+
+		local desc, args = spTraceScreenRay(mx, my, false)
+		local mUnitID
+		if desc and desc == "unit" then
+			mUnitID = args
+		else
+			mUnitID = nil
 			RemoveSelectedUnit(mouseUnit, true)
-            mouseUnit = nil
-        end
-        if mUnitID and (mUnitID ~= mouseUnit) then
+			mouseUnit = nil
+		end
+		if mUnitID and (mUnitID ~= mouseUnit) then
 			RemoveSelectedUnit(mouseUnit, true)
 			if not selections[mUnitID] then
-            	AddSelectedUnit(mUnitID, true)
+				AddSelectedUnit(mUnitID, true)
 			end
 			mouseUnit = mUnitID
-        end
+		end
+
     end
 
 	if gameFrame % 3 == 2 then
