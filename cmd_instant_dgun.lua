@@ -4,7 +4,7 @@ function widget:GetInfo()
         desc      = "Aims when you press d-gun key down, fires when you release. VERSION 2: seamless integration with meta key use, it should feel just like with shift!",
         author    = "Errrrrrr",
         date      = "May 23, 2023",
-        version   = "2.0",
+        version   = "2.1",
         license   = "GNU GPL, v2 or later",
         layer     = 999999,
         enabled   = true,
@@ -22,7 +22,7 @@ local enabled = true
 local selectedUnits = {}
 local active = false
 local mouseClicked = false
-local curMods = {}   -- {alt, ctrl, meta, shift}
+local curMods = {false,false,false,false}   -- {alt, ctrl, meta, shift}
 
 -- shortcuts
 local echo = Spring.Echo
@@ -104,11 +104,11 @@ local function dumpToFile(obj, prefix, filename)
     file:close()
 end
 
-local keyBindings = GetKeyBindings() -- Get the key bindings from the game
+local keyBindings = GetKeyBindings() -- Get the key bindings from the game, might not work here depending on widget load order
 
 -- let's make a lookup table for faster cmd lookup
 local keyToBinding = {}
-for _, binding in pairs(keyBindings) do
+--[[ for _, binding in pairs(keyBindings) do
     local key = binding["boundWith"]
     local cmd = binding["command"]
     if key and cmd then
@@ -125,7 +125,7 @@ for _, binding in pairs(keyBindings) do
             end
         end
     end
-end
+end ]]
 
 --table.save(keyToBinding, "LuaUI/config/keyToBinding.txt", "Smart Commands")
 
@@ -148,6 +148,25 @@ local isBuildKey = {
 
 
 function widget:Initialize()
+    local keyBindings = GetKeyBindings()
+    for _, binding in pairs(keyBindings) do
+        local key = binding["boundWith"]
+        local cmd = binding["command"]
+        if key and cmd then
+            if keyToBinding[key] == nil then keyToBinding[key] = cmd
+            else
+                -- if there's clash, we need to add to existing
+                local value = keyToBinding[key]
+                if type(value) == "table" then  -- already more than one entry
+                    value[#value+1] = cmd
+                    keyToBinding[key] = value
+                elseif type(value) == "string" then  -- one entry only
+                    local newValue = {value, cmd}
+                    keyToBinding[key] = newValue
+                end
+            end
+        end
+    end
     selectedUnits = GetSelectedUnits()
 end
 
@@ -348,5 +367,3 @@ function GetCmdOpts(alt, ctrl, meta, shift, right)
     opts.coded = coded
     return opts
 end
-
-
