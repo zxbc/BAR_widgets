@@ -109,24 +109,7 @@ local keyBindings = GetKeyBindings() -- Get the key bindings from the game
 
 -- let's make a lookup table for faster cmd lookup
 local keyToBinding = {}
-for _, binding in pairs(keyBindings) do
-    local key = binding["boundWith"]
-    local cmd = binding["command"]
-    if key and cmd then
-        if keyToBinding[key] == nil then keyToBinding[key] = cmd
-        else
-            -- if there's clash, we need to add to existing
-            local value = keyToBinding[key]
-            if type(value) == "table" then  -- already more than one entry
-                value[#value+1] = cmd
-                keyToBinding[key] = value
-            elseif type(value) == "string" then  -- one entry only
-                local newValue = {value, cmd}
-                keyToBinding[key] = newValue
-            end
-        end
-    end
-end
+
 
 --table.save(keyToBinding, "LuaUI/config/keyToBinding.txt", "Smart Commands")
 
@@ -151,6 +134,25 @@ local isBuildKey = {
 function widget:Initialize()
     selectedUnits = GetSelectedUnits()
     widgetHandler.actionHandler:AddAction(self, "gui_smart_commands_onoff_toggle", toggle, nil, "p")
+    local keyBindings = GetKeyBindings()
+    for _, binding in pairs(keyBindings) do
+        local key = binding["boundWith"]
+        local cmd = binding["command"]
+        if key and cmd then
+            if keyToBinding[key] == nil then keyToBinding[key] = cmd
+            else
+                -- if there's clash, we need to add to existing
+                local value = keyToBinding[key]
+                if type(value) == "table" then  -- already more than one entry
+                    value[#value+1] = cmd
+                    keyToBinding[key] = value
+                elseif type(value) == "string" then  -- one entry only
+                    local newValue = {value, cmd}
+                    keyToBinding[key] = newValue
+                end
+            end
+        end
+    end
 end
 
 function toggle(_,_,args)
