@@ -23,10 +23,10 @@ local builder_fade_scale = 0.05		-- inner ring fade scale for builders
 
 -- alpha settings
 local outer_ring_alpha = 0.88    -- this is the outer edge formed by the stenciled rings
-local inner_ring_alpha = 0.2    -- this is the inner rings that overlap from each unit
+local inner_ring_alpha = 0.15    -- this is the inner rings that overlap from each unit
                                 -- note that units with multiple weapons also rely on this to display their short ranges
                                 -- if you want to reduce clutter with large unit count, turn up group_selection_fade_scale
-local fill_alpha = 0.12        -- this is the solid color in the middle of the stencil
+local fill_alpha = 0.15       -- this is the solid color in the middle of the stencil
 local outer_fade_height_difference = 2000
 ---------------------------------------------------------------------------------------------------------------------------
 local show_selected_weapon_ranges = true
@@ -709,7 +709,7 @@ local selections = {}  -- contains params for added vaos
 local mouseUnit
 local mouseovers = {}	-- mirroring selections, but for mouseovers
 
-local unitsOnOff = {}	-- unit weapon toggle states, tracked from CommandNotify
+local unitsOnOff = {}	-- unit weapon toggle states, tracked from CommandNotify (also building on off status)
 local myTeam = Spring.GetMyTeamID()
 
 local function GetUnitDef(unitID)
@@ -773,12 +773,20 @@ local function AddSelectedUnit(unitID, mouseover)
 	for j, weaponType in pairs(unitDefRings[unitDef.id]['weapons']) do
 		local drawIt = true
 		-- we need to check if the unit has toggled weapon state, and only add the one active
-		local weaponOnOff = unitsOnOff[unitID] or 0
-		local weaponState = weaponOnOff + 1 -- OnOff starts from 0, we want to get index starting from 1
+		local weaponOnOff
 		local unitIsOnOff = spFindUnitCmdDesc(unitID, 85) ~= nil	-- if this unit can toggle weapons
-		if unitIsOnOff and weaponState ~= j then drawIt = false end
+		-- on off can be set on a building, we need to check that
+		if unitDef.isBuilding and unitIsOnOff then	-- if it's a building, we display range if it's on
+			weaponOnOff = unitsOnOff[unitID] or 1
+			drawIt = (weaponOnOff == 1)
+		elseif unitIsOnOff then	-- this is a unit with 2 weapons
+			weaponOnOff = unitsOnOff[unitID] or 0
+			if weaponOnOff + 1 ~= j then -- remember weaponOnOff is 0 or 1, weapon number starts from 1
+				drawIt = false	-- if weapon number isn't matching currently toggled, don't draw
+			end
+		end
 
-		local allystring = alliedUnit and "ally" or "enemy" 
+		local allystring = alliedUnit and "ally" or "enemy"
 		local ringParams = unitDefRings[unitDef.id]['rings'][j]
 		if drawIt and ringParams[1] > 0 then
 			--local weaponType = unitDefRings[unitDefID]['weapons'][weaponNum]
@@ -802,6 +810,7 @@ local function AddSelectedUnit(unitID, mouseover)
 				end
 			end
 			local instanceID = 10000000 * (mouseover and 1 or 0) + 1000000 * weaponType + unitID + 100000 * j -- weapon index needs to be included here for uniqueness
+			--Spring.Echo("instanceID created: "..tostring(instanceID))
 			pushElementInstance(attackRangeVAOs[vaokey], cacheTable, instanceID, true,  false, unitID)
 			addedrings = addedrings + 1
 			if collections[unitID] == nil then
@@ -811,7 +820,7 @@ local function AddSelectedUnit(unitID, mouseover)
 			collections[unitID].vaokeys[instanceID] = vaokey
 		end
 	end
-	--Spring.Echo("added unit ring")
+	--Spring.Echo("Rings added: " ..tostring(addedrings))
 	-- we cheat here and update builder count
 	if isBuilder(unitDef) and addedrings > 0 then
 		selBuilderCount = selBuilderCount + 1
@@ -1134,7 +1143,7 @@ local function DRAWRINGS(primitiveType, linethickness)
 		local atkRangeClass = allyState.."cannon"
 		local iT = attackRangeVAOs
 	[atkRangeClass]
-		stencilMask = 2 ^ ( 4 * (i-1) + 3)
+		stencilMask = 2 ^ ( 4 * (i-1) + 0) --2 ^ ( 4 * (i-1) + 3)
 		drawcounts[stencilMask] = iT.usedElements
 		if iT.usedElements > 0 and buttonConfig[allyState]["ground"] then
 			if linethickness then
