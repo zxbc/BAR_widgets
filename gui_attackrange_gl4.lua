@@ -773,17 +773,22 @@ local function AddSelectedUnit(unitID, mouseover)
 	for j, weaponType in pairs(unitDefRings[unitDef.id]['weapons']) do
 		local drawIt = true
 		-- we need to check if the unit has toggled weapon state, and only add the one active
-		local weaponOnOff
-		local unitIsOnOff = spFindUnitCmdDesc(unitID, 85) ~= nil	-- if this unit can toggle weapons
+		local weaponOnOff, onOffName
+
+		local unitIsOnOff = unitDef.onOffable --spFindUnitCmdDesc(unitID, 85) ~= nil	-- if this unit can toggle weapons
+		local customParams = unitDef.customParams
+
+		if customParams then
+			onOffName = customParams.onoffname
+			--Spring.Echo("onOffName: ".. tostring(onOffName))
+		end
 		-- on off can be set on a building, we need to check that
-		if unitDef.isBuilding and unitIsOnOff then	-- if it's a building, we display range if it's on
+		if unitIsOnOff and not onOffName then	-- if it's a building with actual on/off, we display range if it's on
 			weaponOnOff = unitsOnOff[unitID] or 1
 			drawIt = (weaponOnOff == 1)
-		elseif unitIsOnOff then	-- this is a unit with 2 weapons
+		elseif unitIsOnOff and onOffName then	-- this is a unit or building with 2 weapons
 			weaponOnOff = unitsOnOff[unitID] or 0
-			if weaponOnOff + 1 ~= j then -- remember weaponOnOff is 0 or 1, weapon number starts from 1
-				drawIt = false	-- if weapon number isn't matching currently toggled, don't draw
-			end
+			drawIt = ((weaponOnOff + 1) == j) -- remember weaponOnOff is 0 or 1, weapon number starts from 1
 		end
 
 		local allystring = alliedUnit and "ally" or "enemy"
