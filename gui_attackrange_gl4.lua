@@ -202,7 +202,13 @@ local function initializeUnitDefRing(unitDefID)
 			local fadeparams =  colorConfig[weaponTypeMap[weaponType]].fadeparams
 
 			local isCylinder = weaponDef.cylinderTargeting and 1 or 0
-			local isDgun = (weaponDef.weaponType == "DGun")
+			local isDgun = (weaponDef.type == "DGun") and 1 or 0
+			-- debug shit
+--[[ 			local wDef = {}
+			for name,param in weaponDef:pairs() do
+				wDef[name]=param
+			end
+			Spring.Echo("wDef: "..tableToString(wDef)) ]]
 
 			local customParams = weaponDef.customParams
 			local wName = weaponDef.name
@@ -242,7 +248,8 @@ local function initializeUnitDefRing(unitDefID)
 			0,
 			0,
 			groupselectionfadescale,
-			2
+			2,
+			0
 		}
 		unitDefRings[unitDefID]['rings'][weaponCount + 1] = ringParams	-- weaponCount + 1 is nano
 		--Spring.Echo("added builder! "..tableToString(unitDefRings[unitDef.id]))
@@ -531,7 +538,12 @@ local vsSrc = [[
 		
 		// translate to world pos:
 		vec4 circleWorldPos = vec4(1.0);
-		circleWorldPos.xz = circlepointposition.xy * RANGE +  modelWorldPos.xz;
+		float range2 = RANGE;
+		if (ISDGUN > 0.5) {
+			circleWorldPos.xz = circlepointposition.xy * RANGE * 1.05 + modelWorldPos.xz;
+		} else {
+			circleWorldPos.xz = circlepointposition.xy * RANGE +  modelWorldPos.xz;
+		}
 	
 		vec4 alphaControl = vec4(1.0);
 	
@@ -579,13 +591,14 @@ local vsSrc = [[
 					// draw vector from centerpoint to new height point and normalize it to range length
 					vec3 tonew = circleWorldPos.xyz - modelWorldPos.xyz;
 					tonew.y *= HEIGHTMOD;
+					
 					tonew = normalize(tonew) * RANGE;
 					circleWorldPos.xz = modelWorldPos.xz + tonew.xz;
 					circleWorldPos.y = heightAtWorldPos(circleWorldPos.xz);
 				}
 			}
 		}
-	
+
 		circleWorldPos.y += 6; // lift it from the ground
 	
 		// -- MAP OUT OF BOUNDS
@@ -609,17 +622,17 @@ local vsSrc = [[
 	
 		if (cannonmode > 0.5){
 		// cannons should fade distance based on their range
-			float cvmin = max(visibility.x+fadeDistOffset, 2* RANGE);
-			float cvmax = max(visibility.y+fadeDistOffset, 4* RANGE);
+			//float cvmin = max(visibility.x+fadeDistOffset, 2* RANGE);
+			//float cvmax = max(visibility.y+fadeDistOffset, 4* RANGE);
 			//FADEALPHA = clamp((cvmin - distToCam)/(cvmax - cvmin + 1.0),visibility.z,visibility.w);
 		}
 	
 		blendedcolor = color1;
 	
 		// -- DARKEN OUT OF LOS
-		vec4 losTexSample = texture(losTex, vec2(circleWorldPos.x / mapSize.z, circleWorldPos.z / mapSize.w)); // lostex is PO2
-		float inlos = dot(losTexSample.rgb,vec3(0.33));
-		inlos = clamp(inlos*5 -1.4	, 0.5,1.0); // fuck if i know why, but change this if LOSCOLORS are changed!
+		//vec4 losTexSample = texture(losTex, vec2(circleWorldPos.x / mapSize.z, circleWorldPos.z / mapSize.w)); // lostex is PO2
+		//float inlos = dot(losTexSample.rgb,vec3(0.33));
+		//inlos = clamp(inlos*5 -1.4	, 0.5,1.0); // fuck if i know why, but change this if LOSCOLORS are changed!
 		//blendedcolor.rgb *= inlos;
 	
 		// --- YES FOG
@@ -629,10 +642,10 @@ local vsSrc = [[
 	
 	
 		// -- IN-SHADER MOUSE-POS BASED HIGHLIGHTING
-		//float disttomousefromunit = 1.0 - smoothstep(48, 64, length(modelWorldPos.xz - mouseWorldPos.xz));
+		float disttomousefromunit = 1.0 - smoothstep(48, 64, length(modelWorldPos.xz - mouseWorldPos.xz));
 		// this will be positive if in mouse, negative else
-		//float highightme = clamp( (disttomousefromunit ) + 0.0, 0.0, 1.0);
-		MOUSEALPHA = 0.1;
+		float highlightme = clamp( (disttomousefromunit ) + 0.0, 0.0, 1.0);
+		MOUSEALPHA = 0.1* highlightme;
 	
 		// ------------ dump the stuff for FS --------------------
 		//worldPos = circleWorldPos;
@@ -749,12 +762,6 @@ local function AddSelectedUnit(unitID, mouseover)
 			if range > 0 then
 				if weaponDef.description:find("g2a") and not weaponDef.description:find("g2g") then
 					--Spring.Echo("AA? " .. weaponDef.name..": "..tostring(weaponDef.description))
-					-- debug print of weaponDef params
---[[ 					local wDef = {}
-					for name,param in weaponDef:pairs() do
-						wDef[name]=param
-					end
-					Spring.Echo("wDef: "..tableToString(wDef)) ]]
 					entry.weapons[weaponNum] = 3		-- weaponTypeMap[3] is "AA"
 					--Spring.Echo("added AA weapon: ".. weaponDef.name)
 				elseif weaponDef.type == "Cannon" then
@@ -915,7 +922,7 @@ local function initGL4()
 	largeCircleVBO = makeCircleVBO(largeCircleSegments)
 	for i,atkRangeClass in ipairs(attackRangeClasses) do
 		attackRangeVAOs
-	[atkRangeClass] = makeInstanceVBOTable(circleInstanceVBOLayout,24,atkRangeClass, 6) -- 6 is unitIDattribID (instData)
+	[atkRangeClass] = makeInstanceVBOTable(circleInstanceVBOLayout,20,atkRangeClass, 6) -- 6 is unitIDattribID (instData)
 		if atkRangeClass:find("cannon", nil, true) or atkRangeClass:find("AA", nil, true) then
 			attackRangeVAOs
 		[atkRangeClass].vertexVBO = largeCircleVBO
