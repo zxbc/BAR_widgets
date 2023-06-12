@@ -125,7 +125,7 @@ local keyToBinding = {}
             end
         end
     end
-end ]]
+end  ]]
 
 --table.save(keyToBinding, "LuaUI/config/keyToBinding.txt", "Smart Commands")
 
@@ -240,7 +240,7 @@ function widget:KeyPress(key, mods, isRepeat)
     end
     active = setActiveCmdFromKey(key, mods, isRepeat)
 
-    return false
+    return active
 end
 
 function widget:KeyRelease(key)
