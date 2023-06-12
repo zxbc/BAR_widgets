@@ -109,6 +109,24 @@ local keyBindings = GetKeyBindings() -- Get the key bindings from the game
 
 -- let's make a lookup table for faster cmd lookup
 local keyToBinding = {}
+--[[ for _, binding in pairs(keyBindings) do
+    local key = binding["boundWith"]
+    local cmd = binding["command"]
+    if key and cmd then
+        if keyToBinding[key] == nil then keyToBinding[key] = cmd
+        else
+            -- if there's clash, we need to add to existing
+            local value = keyToBinding[key]
+            if type(value) == "table" then  -- already more than one entry
+                value[#value+1] = cmd
+                keyToBinding[key] = value
+            elseif type(value) == "string" then  -- one entry only
+                local newValue = {value, cmd}
+                keyToBinding[key] = newValue
+            end
+        end
+    end
+end ]]
 
 
 --table.save(keyToBinding, "LuaUI/config/keyToBinding.txt", "Smart Commands")
@@ -153,6 +171,7 @@ function widget:Initialize()
             end
         end
     end
+    --table.save(keyToBinding, "LuaUI/config/keyToBinding.txt", "Smart Commands")
 end
 
 function toggle(_,_,args)
@@ -183,7 +202,7 @@ local function setActiveCmdFromKey(key)
         keyString = modString .. keyString
         --echo("keyString: "..keyString)
         local cmdName = keyToBinding[keyString]
-        --echo("keyString: "..keyString..", cmdName: "..tostring(cmdName))
+        --echo("keyString: "..keyString..", cmdName: "..tableToString(cmdName))
         if cmdName then
             --echo("command set through keybind search: "..tableToString(cmdName))
             if type(cmdName) == "table" then -- we have multiple commands possible
@@ -191,6 +210,7 @@ local function setActiveCmdFromKey(key)
                 for i=1, #cmdName do
                     cmd = cmdName[i]
                     result = SetActiveCommand(cmd)
+                    --Spring.Echo("set to active: "..tostring(cmd))
                     if result then break end
                 end
                 --if not result then echo("Error in finding bound command!") end
@@ -224,8 +244,7 @@ function widget:KeyPress(key, mods, isRepeat)
         --echo("mouse clicked FALSE")
     end
     active = setActiveCmdFromKey(key, mods, isRepeat)
-
-    return false
+    return active
 end
 
 function widget:KeyRelease(key)
