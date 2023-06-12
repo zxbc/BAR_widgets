@@ -61,18 +61,18 @@ local colorConfig = { --An array of R, G, B, Alpha
         internallinethickness = 2.0,
     },
     AA = {
-        color = {1.0, 0.33, 0.7, 0.8,},
+        color = {1.0, 0.33, 0.7, 0.45},
         fadeparams = {1000, 3000, 1.0, 0.1}, -- FadeStart, FadeEnd, StartAlpha, EndAlpha
         groupselectionfadescale = group_selection_fade_scale,
         externallinethickness = 3.0,
         internallinethickness = 2.0,
     },
     cannon = {
-        color = {1.0, 0.22, 0.05, 0.9},
+        color = {1.0, 0.22, 0.05, 0.7},
         fadeparams = {1000, 2500, 1.0, 0.1}, -- FadeStart, FadeEnd, StartAlpha, EndAlpha
         groupselectionfadescale = group_selection_fade_scale,
-        externallinethickness = 3.0,
-        internallinethickness = 2.0,
+        externallinethickness = 6.0,
+        internallinethickness = 5.0,
     },
 }
 
@@ -199,16 +199,13 @@ local function initializeUnitDefRing(unitDefID)
 			local color = colorConfig[weaponTypeMap[weaponType]].color
 			local fadeparams =  colorConfig[weaponTypeMap[weaponType]].fadeparams
 
-			local isCylinder = 0
- 			if weaponDef.cylinderTargeting and weaponDef.cylinderTargeting > 0 then
-				isCylinder = 1
-				--Spring.Echo("cylinder weapon found!")
-			end
+			local isCylinder = weaponDef.cylinderTargeting and 1 or 0
+			local gravityAffected = weaponDef.gravityAffected and 1 or 0
 
 			local customParams = weaponDef.customParams
 			local wName = weaponDef.name
 			if (weaponDef.type == "AircraftBomb") or (wName:find("bogus")) then
-				Spring.Echo("bogus weapon found: "..tostring(wName))
+				--Spring.Echo("bogus weapon found: "..tostring(wName))
 				range = 0
 			end
 			--Spring.Echo("weaponNum: ".. weaponNum ..", name: " .. tableToString(weaponDef.name))
@@ -221,6 +218,7 @@ local function initializeUnitDefRing(unitDefID)
 				weaponDef.heightMod or 0,
 				groupselectionfadescale,
 				weaponType,
+				gravityAffected
 			}
 			unitDefRings[unitDefID]['rings'][weaponNum] = ringParams
 			--Spring.Echo("Added ringParams: "..tableToString(ringParams))
@@ -514,6 +512,8 @@ local vsSrc = [[
 	#define OUTOFBOUNDSALPHA alphaControl.y
 	#define FADEALPHA alphaControl.z
 	#define MOUSEALPHA alphaControl.w
+
+	#define GRAVITYAFFECTED additionalParams.z
 	
 	void main() {
 		// Get the center pos of the unit
@@ -745,7 +745,14 @@ local function AddSelectedUnit(unitID, mouseover)
 			local weaponDef = WeaponDefs[weaponDefID]
 			local range = weaponDef.range
 			if range > 0 then
-				if not weaponDef.canAttackGround then
+				if weaponDef.description:find("g2a") and not weaponDef.description:find("g2g") then
+					Spring.Echo("AA? " .. weaponDef.name..": "..tostring(weaponDef.description))
+					-- debug print of weaponDef params
+--[[ 					local wDef = {}
+					for name,param in weaponDef:pairs() do
+						wDef[name]=param
+					end
+					Spring.Echo("wDef: "..tableToString(wDef)) ]]
 					entry.weapons[weaponNum] = 3		-- weaponTypeMap[3] is "AA"
 					--Spring.Echo("added AA weapon: ".. weaponDef.name)
 				elseif weaponDef.type == "Cannon" then
@@ -802,7 +809,7 @@ local function AddSelectedUnit(unitID, mouseover)
 			cacheTable[3] = mpz
 			local vaokey = allystring ..weaponTypeToString[weaponType]
 
-			for i = 1,15 do
+			for i = 1,16 do
 				cacheTable[i+3] = ringParams[i]
 			end
 
@@ -1149,7 +1156,7 @@ local function DRAWRINGS(primitiveType, linethickness)
 	for i,allyState in ipairs(allyenemypairs) do
 		local atkRangeClass = allyState.."cannon"
 		local iT = attackRangeVAOs[atkRangeClass]
-		stencilMask = 2 ^ ( 4 * (i-1) + 3) --2 ^ ( 4 * (i-1) + 0)
+		stencilMask = 2 ^ ( 4 * (i-1) + 0) --2 ^ ( 4 * (i-1) + 3)
 		drawcounts[stencilMask] = iT.usedElements
 		if iT.usedElements > 0 then --and buttonConfig[allyState]["ground"] then
 			if linethickness then
