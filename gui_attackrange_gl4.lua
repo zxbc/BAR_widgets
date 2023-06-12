@@ -21,6 +21,8 @@ local cursor_unit_range = true    -- displays the range of the unit at the mouse
 local group_selection_fade_scale = 0.75 -- can set to 0 to have inner rings not dim at all with large group selection
 local builder_fade_scale = 0.05        -- inner ring fade scale for builders
 
+local cannon_separate_stencil = false -- set to true to have cannon and ground be on different stencil mask
+
 -- alpha settings
 local outer_ring_alpha = 0.88    -- this is the outer edge formed by the stenciled rings
 local inner_ring_alpha = 0.12    -- this is the inner rings that overlap from each unit
@@ -68,11 +70,11 @@ local colorConfig = { --An array of R, G, B, Alpha
         internallinethickness = 2.0,
     },
     cannon = {
-        color = {1.0, 0.22, 0.05, 0.7},
+        color = {1.0, 0.22, 0.05, 0.75},
         fadeparams = {1000, 2500, 1.0, 0.1}, -- FadeStart, FadeEnd, StartAlpha, EndAlpha
         groupselectionfadescale = group_selection_fade_scale,
-        externallinethickness = 6.0,
-        internallinethickness = 5.0,
+        externallinethickness = 5.0,
+        internallinethickness = 4.0,
     },
 }
 
@@ -200,7 +202,7 @@ local function initializeUnitDefRing(unitDefID)
 			local fadeparams =  colorConfig[weaponTypeMap[weaponType]].fadeparams
 
 			local isCylinder = weaponDef.cylinderTargeting and 1 or 0
-			local gravityAffected = weaponDef.gravityAffected and 1 or 0
+			local isDgun = (weaponDef.weaponType == "DGun")
 
 			local customParams = weaponDef.customParams
 			local wName = weaponDef.name
@@ -218,7 +220,7 @@ local function initializeUnitDefRing(unitDefID)
 				weaponDef.heightMod or 0,
 				groupselectionfadescale,
 				weaponType,
-				gravityAffected
+				isDgun
 			}
 			unitDefRings[unitDefID]['rings'][weaponNum] = ringParams
 			--Spring.Echo("Added ringParams: "..tableToString(ringParams))
@@ -513,7 +515,7 @@ local vsSrc = [[
 	#define FADEALPHA alphaControl.z
 	#define MOUSEALPHA alphaControl.w
 
-	#define GRAVITYAFFECTED additionalParams.z
+	#define ISDGUN additionalParams.z
 	
 	void main() {
 		// Get the center pos of the unit
@@ -597,7 +599,7 @@ local vsSrc = [[
 		float distToCam = length(modelWorldPos.xyz - camPos.xyz); //dist from cam
 		// FadeStart, FadeEnd, StartAlpha, EndAlpha
 		float fadeDist = visibility.y - visibility.x;
-		FADEALPHA  = clamp((visibility.y + fadeDistOffset - distToCam)/(fadeDist), 0, 1); //,visibility.z,visibility.w);
+		FADEALPHA  = clamp((visibility.y + fadeDistOffset - distToCam)/(fadeDist),visibility.w,visibility.z);
 	
 		//--- Optimize by anything faded out getting transformed back to origin with 0 range?
 		//seems pretty ok!
@@ -746,7 +748,7 @@ local function AddSelectedUnit(unitID, mouseover)
 			local range = weaponDef.range
 			if range > 0 then
 				if weaponDef.description:find("g2a") and not weaponDef.description:find("g2g") then
-					Spring.Echo("AA? " .. weaponDef.name..": "..tostring(weaponDef.description))
+					--Spring.Echo("AA? " .. weaponDef.name..": "..tostring(weaponDef.description))
 					-- debug print of weaponDef params
 --[[ 					local wDef = {}
 					for name,param in weaponDef:pairs() do
@@ -1156,7 +1158,8 @@ local function DRAWRINGS(primitiveType, linethickness)
 	for i,allyState in ipairs(allyenemypairs) do
 		local atkRangeClass = allyState.."cannon"
 		local iT = attackRangeVAOs[atkRangeClass]
-		stencilMask = 2 ^ ( 4 * (i-1) + 0) --2 ^ ( 4 * (i-1) + 3)
+		local stencilOffset = cannon_separate_stencil and 3 or 0
+		stencilMask = 2 ^ ( 4 * (i-1) + stencilOffset)	-- if 0 then it's on the same as "ground"
 		drawcounts[stencilMask] = iT.usedElements
 		if iT.usedElements > 0 then --and buttonConfig[allyState]["ground"] then
 			if linethickness then
