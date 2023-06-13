@@ -3,7 +3,7 @@ include("keysym.h.lua")
 function widget:GetInfo()
 	return {
 		name      = "Attack Range GL4",
-		desc      = "Displays attack ranges of selected units. Can bind keys to toggle cursor unit range and all unit ranges on and off.",
+		desc      = "Displays attack ranges of selected units. Alt+. (alt + period key) toggles individual unit's range display (saved through games!). Custom keybind to toggle cursor unit range on and off.",
 		author    = "Errrrrrr, Beherith",
 		date      = "June 2023",
 		version   = "1.0",
@@ -24,12 +24,12 @@ local builder_fade_scale = 0.05        -- inner ring fade scale for builders
 local cannon_separate_stencil = false -- set to true to have cannon and ground be on different stencil mask
 
 -- alpha settings
-local outer_ring_alpha = 0.88    -- this is the outer edge formed by the stenciled rings
-local inner_ring_alpha = 0.12    -- this is the inner rings that overlap from each unit
+local outer_ring_alpha = 0.80    -- this is the outer edge formed by the stenciled rings
+local inner_ring_alpha = 0.20    -- this is the inner rings that overlap from each unit
                                 -- note that units with multiple weapons also rely on this to display their short ranges
                                 -- if you want to reduce clutter with large unit count, turn up group_selection_fade_scale
 local fill_alpha = 0.10       -- this is the solid color in the middle of the stencil
-local outer_fade_height_difference = 3000
+local outer_fade_height_difference = 5500
 ---------------------------------------------------------------------------------------------------------------------------
 local show_selected_weapon_ranges = true
 local innerRingDim = 1    -- don't change this
@@ -46,35 +46,35 @@ local colorConfig = { --An array of R, G, B, Alpha
     drawInnerRings = true, -- wether to draw inner, per attack rings (very cheap)
     externalalpha = outer_ring_alpha, -- alpha of outer rings
     internalalpha = inner_ring_alpha, -- alpha of inner rings
-    distanceScaleStart = 2000, -- Linewidth is 100% up to this camera height
-    distanceScaleEnd = 4000, -- Linewidth becomes 50% above this camera height
+    distanceScaleStart = 1500, -- Linewidth is 100% up to this camera height
+    distanceScaleEnd = 5000, -- Linewidth becomes 50% above this camera height
     ground = {
-        color = {1.0, 0.22, 0.05, 0.9},
-        fadeparams = { 800, 2500, 1.0, 0.1}, -- FadeStart, FadeEnd, StartAlpha, EndAlpha
+        color = {1.0, 0.22, 0.05, 0.60},
+        fadeparams = { 1200, 1800, 1.0, 0.0}, -- FadeStart, FadeEnd, StartAlpha, EndAlpha
         groupselectionfadescale = group_selection_fade_scale,
         externallinethickness = 3.0,
         internallinethickness = 2.0,
     },
     nano = {
-        color = {0.24, 1.0, 0.2, 0.45},
-        fadeparams = { 800, 2500, 0.9, 0.1}, -- FadeStart, FadeEnd, StartAlpha, EndAlpha
+        color = {0.24, 1.0, 0.2, 0.40},
+        fadeparams = { 2000, 4000, 1.0, 0.0}, -- FadeStart, FadeEnd, StartAlpha, EndAlpha
         groupselectionfadescale = builder_fade_scale,
         externallinethickness = 3.0,
         internallinethickness = 2.0,
     },
     AA = {
-        color = {1.0, 0.33, 0.7, 0.45},
-        fadeparams = {1000, 3000, 1.0, 0.1}, -- FadeStart, FadeEnd, StartAlpha, EndAlpha
+        color = {0.8, 0.44, 2.0, 0.40},
+        fadeparams = { 1200, 1800, 1.0, 0.0}, -- FadeStart, FadeEnd, StartAlpha, EndAlpha
         groupselectionfadescale = group_selection_fade_scale,
-        externallinethickness = 3.0,
+        externallinethickness = 2.5,
         internallinethickness = 2.0,
     },
     cannon = {
-        color = {1.0, 0.22, 0.05, 0.75},
-        fadeparams = {1000, 2500, 1.0, 0.1}, -- FadeStart, FadeEnd, StartAlpha, EndAlpha
+        color = {1.0, 0.22, 0.05, 0.60},
+        fadeparams = { 1200, 1800, 1.0, 0.0}, -- FadeStart, FadeEnd, StartAlpha, EndAlpha
         groupselectionfadescale = group_selection_fade_scale,
-        externallinethickness = 5.0,
-        internallinethickness = 4.0,
+        externallinethickness = 3.0,
+        internallinethickness = 2.0,
     },
 }
 
@@ -103,6 +103,16 @@ local selBuilderCount = 0	-- we need builder count separately
 local shifted = false
 local isBuilding = false
 local builders = {}		-- { unitID = unitDef, ...}
+
+local unitToggles = {}
+local unitTogglesChunked = {}
+
+local chunk, err = loadfile("LuaUI/config/AttackRangeConfig.lua")
+if chunk then
+	local tmp = {}
+	setfenv(chunk, tmp)
+	unitTogglesChunked = chunk()
+end
 
 --helpers
 local function tableToString(t)
@@ -264,7 +274,7 @@ local function initUnitList()
 		initializeUnitDefRing(unitDefID)
 	end
 	-- Initialize Colors too
-	local scavlist = {}
+--[[ 	local scavlist = {}
 	for k,_ in pairs(unitDefRings) do
 		scavlist[k] = true
 	end
@@ -294,7 +304,7 @@ local function initUnitList()
 				--Spring.Echo(FeatureDefNames[unitDefName..suffix].id, unitDefID)
 			end
 		end
-	end
+	end ]]
 
 end
 
@@ -747,6 +757,16 @@ local function AddSelectedUnit(unitID, mouseover)
 	if not unitDef then return end
 	if collections[unitID] ~= nil then return end
 
+	--- if unittype is toggled off we don't proceed at all
+	local unitName = unitDef.name
+	local alliedUnit = (spGetUnitAllyTeam(unitID) == myAllyTeam)
+	local allystring = alliedUnit and "ally" or "enemy"
+
+	if (not mouseover) and (unitToggles[unitName]) and (unitToggles[unitName][allystring] == 0) then
+		--Spring.Echo("Unit display blocked by toggle setting: "..unitName..", "..allystring)
+		return
+	end
+
 	--local alliedUnit = (spGetUnitAllyTeam(unitID) == myAllyTeam)
 	--local x, y, z, mpx, mpy, mpz, apx, apy, apz = spGetUnitPosition(unitID, true, true)
 	local weapons = unitDef.weapons
@@ -783,7 +803,7 @@ local function AddSelectedUnit(unitID, mouseover)
 		initializeUnitDefRing(unitDef.id)
 	end
 
-	local alliedUnit = (spGetUnitAllyTeam(unitID) == myAllyTeam)
+	
 	local x, y, z, mpx, mpy, mpz, apx, apy, apz = spGetUnitPosition(unitID, true, true)
 
 	--for weaponNum = 1, #weapons do
@@ -809,7 +829,6 @@ local function AddSelectedUnit(unitID, mouseover)
 			drawIt = ((weaponOnOff + 1) == j) -- remember weaponOnOff is 0 or 1, weapon number starts from 1
 		end
 
-		local allystring = alliedUnit and "ally" or "enemy"
 		local ringParams = unitDefRings[unitDef.id]['rings'][j]
 		if drawIt and ringParams[1] > 0 then
 			--local weaponType = unitDefRings[unitDefID]['weapons'][weaponNum]
@@ -883,8 +902,8 @@ end
 local function InitializeBuilders()
 	builders = {}
 	for _, unitID in ipairs(Spring.GetTeamUnits(Spring.GetMyTeamID())) do
-		if isBuilder(UnitDefs[Spring.GetUnitDefID(unitID)]) then  -- Check if the unit is a builder using the "isBuilder()" function
-			builders[unitID] = UnitDefs[Spring.GetUnitDefID(unitID)]
+		if isBuilder(UnitDefs[spGetUnitDefID(unitID)]) then
+			builders[unitID] = UnitDefs[spGetUnitDefID(unitID)]
 		end
 	end
 end
@@ -953,6 +972,11 @@ function widget:Initialize()
 
 	if initGL4() == false then
 		return
+	end
+
+	unitTogglesChunked = unitTogglesChunked or {}
+	for i, v in pairs(unitTogglesChunked) do
+		unitToggles[i] = v
 	end
 
 	widgetHandler.actionHandler:AddAction(self, "cursor_range_toggle", ToggleCursorRange, nil, "p")
@@ -1051,6 +1075,69 @@ local function DrawBuilders()
 	
 end
 
+-- refresh all display according to toggle status
+local function RefreshEverything()
+--[[ 	local units = Spring.GetAllUnits()
+
+    for i = 1, #units do
+		local unitID = units[i]
+		local unitDef = UnitDefs[spGetUnitDefID(unitID)]
+
+		if unitDef and unitDef.maxWeaponRange > 0 then	-- there actually is a range to display
+			local alliedUnit = (spGetUnitAllyTeam(unitID) == myAllyTeam)
+			local allystring = alliedUnit and "ally" or "enemy"
+			local name = unitDef.name
+			-- if it's toggled off we remove it here
+			if unitToggles[unitName] and unitToggles[unitName][allystring] == 0 then
+				RemoveSelectedUnit(unitID)
+			else	-- if it isn't toggled off and it's selected, we need to add it
+				if selections[unitID] then
+					AddSelectedUnit(unitID)
+				end
+			end
+		end
+	end ]]
+
+	-- what about just reinitialize?
+	attackRangeVAOs = {}
+	selections = {}
+	selUnitCount = 0
+	selectedUnits = {}
+	selUnits = {}
+	mouseovers = {}
+
+	widget:Initialize()
+end
+
+local function ToggleUnitDisplay()
+	if (selUnitCount > 1) or (selUnitCount == 0) then 
+		Spring.Echo("Please select only one unit to change display setting!")
+		return
+	end
+	local unitID = selectedUnits[1]
+	if not unitID then return end
+
+	local alliedUnit = (spGetUnitAllyTeam(unitID) == myAllyTeam)
+	local allystring = alliedUnit and "ally" or "enemy"
+	local unitDef = UnitDefs[spGetUnitDefID(unitID)]
+	if unitDef.maxWeaponRange == 0 then
+		Spring.Echo("Unit has no weapon range!")
+		return
+	end
+	local name = unitDef.name
+	
+	unitToggles[name] = unitToggles[name] or {}
+	if not unitToggles[name][allystring] then	-- default toggle is on, we set it to off (0)
+		unitToggles[name][allystring] = 0
+	else	-- there's already something stored here so we toggle this value
+		unitToggles[name][allystring] = (unitToggles[name][allystring] + 1) % 2
+	end
+	Spring.Echo("Changed range display of "..name.." to "..tostring(unitToggles[name][allystring]))
+	-- write toggle changes to file
+	table.save(unitToggles, "LuaUI/config/AttackRangeConfig.lua", "--Attack Range Display Configuration")
+	RefreshEverything()
+end
+
 function Toggle(on)
 	if show_selected_weapon_ranges == on then return end
 	--Spring.Echo("toggled ".. tostring(on))
@@ -1061,6 +1148,9 @@ end
 function widget:KeyPress(key, mods, isRepeat)
 	if key == 304 then
 		shifted = true
+	end
+	if key == 46 and mods.alt then
+		ToggleUnitDisplay()
 	end
 end
 
