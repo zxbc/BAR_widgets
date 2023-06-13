@@ -1,7 +1,7 @@
 function widget:GetInfo()
     return {
        name = "Toggle Simple Team Colors",
-       desc = "Turns simple team colors option on and off with a keybind. Default toggle key is alt-o, rebindable through custom keybind, using action 'toggle_simple_team_colors'",
+       desc = "Turns simple team colors option on and off with a keybind. Default toggle key is alt-p, rebindable through custom keybind, using action 'toggle_simple_team_colors'",
        author = "Errrrrrr",
        date = "May, 2023",
        license = "GNU GPL, v2 or later",
@@ -34,7 +34,7 @@ end
 
 function widget:KeyPress(key, mods, isRepeat)
     if not custom_keybind_mode then
-        if mods.alt and key == 111 then   -- key 'alt-o'
+        if mods.alt and key == 112 then   -- key 'alt-o'
             toggleTeamColors()
         end
     end
