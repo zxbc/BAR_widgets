@@ -4,7 +4,7 @@ function widget:GetInfo()
 	return {
 		name    = "Attack Range GL4",
 		desc    =
-		"Displays attack ranges of selected units. Alt+. (alt + period key) toggles individual unit's range display (saved through games!). Custom keybind to toggle cursor unit range on and off.",
+		"Displays attack ranges of selected units. Alt+, and alt+. (alt comma and alt period) to cycle backward and forward through display config of current unit (saved through games!). Custom keybind to toggle cursor unit range on and off.",
 		author  = "Errrrrrr, Beherith",
 		date    = "June 2023",
 		version = "1.0",
@@ -44,13 +44,13 @@ local buttonConfig = {
 }
 
 local colorConfig = {
-                                      --An array of R, G, B, Alpha
-	drawStencil = true,               -- wether to draw the outer, merged rings (quite expensive!)
-	drawInnerRings = true,            -- wether to draw inner, per attack rings (very cheap)
+	--An array of R, G, B, Alpha
+	drawStencil = true,            -- wether to draw the outer, merged rings (quite expensive!)
+	drawInnerRings = true,         -- wether to draw inner, per attack rings (very cheap)
 	externalalpha = outer_ring_alpha, -- alpha of outer rings
 	internalalpha = inner_ring_alpha, -- alpha of inner rings
-	distanceScaleStart = 1500,        -- Linewidth is 100% up to this camera height
-	distanceScaleEnd = 5000,          -- Linewidth becomes 50% above this camera height
+	distanceScaleStart = 1500,     -- Linewidth is 100% up to this camera height
+	distanceScaleEnd = 5000,       -- Linewidth becomes 50% above this camera height
 	ground = {
 		color = { 1.0, 0.22, 0.05, 0.60 },
 		fadeparams = { 1200, 1800, 1.0, 0.0 }, -- FadeStart, FadeEnd, StartAlpha, EndAlpha
@@ -180,6 +180,40 @@ local function dumpToFile(obj, prefix, filename)
 
 	file:close()
 end
+
+local function convertToBitmap(statusTable)
+	local bitmap = 0
+	for i, status in ipairs(statusTable) do
+		if status then
+			bitmap = bitmap + 2 ^ (i - 1)
+		end
+	end
+	return bitmap
+end
+
+local function convertToStatusTable(bitmap, numWeapons)
+	local statusTable = {}
+	for i = 1, numWeapons do
+		local status = bitmap % 2 == 1
+		table.insert(statusTable, status)
+		bitmap = (bitmap - (bitmap % 2)) / 2
+	end
+	return statusTable
+end
+
+local function getNextWeaponCombination(currentCombination, direction)
+	local numWeapons = #currentCombination
+	local bitmap = convertToBitmap(currentCombination)
+
+	if direction == 1 then
+		bitmap = (bitmap + 1) % (2 ^ numWeapons)
+	elseif direction == -1 then
+		bitmap = (bitmap - 1) % (2 ^ numWeapons)
+	end
+
+	return convertToStatusTable(bitmap, numWeapons)
+end
+
 
 -- this returns if unitDef is a builder and not a factory
 local function isBuilder(unitDef)
@@ -328,7 +362,7 @@ local GL_LEQUAL             = GL.LEQUAL
 local GL_LINE_LOOP          = GL.LINE_LOOP
 local GL_NOTEQUAL           = GL.NOTEQUAL
 
-local GL_KEEP               = 0x1E00 --GL.KEEP
+local GL_KEEP               = 0x1E00     --GL.KEEP
 local GL_REPLACE            = GL.REPLACE --GL.KEEP
 
 local spGetPositionLosState = Spring.GetPositionLosState
@@ -417,10 +451,10 @@ local function makeCircleVBO(circleSegments)
 
 	local VBOData = {}
 
-	for i = 0, circleSegments do                                -- this is +1
+	for i = 0, circleSegments do                                     -- this is +1
 		VBOData[#VBOData + 1] = math.sin(math.pi * 2 * i / circleSegments) -- X
 		VBOData[#VBOData + 1] = math.cos(math.pi * 2 * i / circleSegments) -- Y
-		VBOData[#VBOData + 1] = i / circleSegments              -- circumference [0-1]
+		VBOData[#VBOData + 1] = i / circleSegments                   -- circumference [0-1]
 		VBOData[#VBOData + 1] = 0
 	end
 
@@ -761,11 +795,6 @@ local function AddSelectedUnit(unitID, mouseover)
 	local alliedUnit = (spGetUnitAllyTeam(unitID) == myAllyTeam)
 	local allystring = alliedUnit and "ally" or "enemy"
 
-	if (not mouseover) and (unitToggles[unitName]) and (unitToggles[unitName][allystring] == 0) then
-		--Spring.Echo("Unit display blocked by toggle setting: "..unitName..", "..allystring)
-		return
-	end
-
 	--local alliedUnit = (spGetUnitAllyTeam(unitID) == myAllyTeam)
 	--local x, y, z, mpx, mpy, mpz, apx, apy, apz = spGetUnitPosition(unitID, true, true)
 	local weapons = unitDef.weapons
@@ -781,14 +810,14 @@ local function AddSelectedUnit(unitID, mouseover)
 			local weapon = weapons[weaponNum]
 
 			-- debug shit
---[[ 			local weaponTable = {}
+			--[[ 			local weaponTable = {}
 			for name,param in pairs(weapon.onlyTargets) do--:pairs() do
 				weaponTable[name]=param
 			end ]]
 			--Spring.Echo("----------weaponDef:   "..tableToString(weaponTable))
-			if range > 0 then
+			if true then --range > 0 then -- trying something different
 				--if weaponDef.description:find("g2a") and not weaponDef.description:find("g2g") then
-				if  weapon.onlyTargets and weapon.onlyTargets.vtol then
+				if weapon.onlyTargets and weapon.onlyTargets.vtol then
 					--Spring.Echo("AA? " .. weaponDef.name..": "..tostring(weaponDef.description))
 					entry.weapons[weaponNum] = 3 -- weaponTypeMap[3] is "AA"
 					--Spring.Echo("added AA weapon: ".. weaponDef.name)
@@ -818,7 +847,7 @@ local function AddSelectedUnit(unitID, mouseover)
 	local addedRings = 0
 	for j, weaponType in pairs(unitDefRings[unitDef.id]['weapons']) do
 		local drawIt = true
-		-- we need to check if the unit has toggled weapon state, and only add the one active
+		-- we need to check if the unit has on/off weapon states, and only add the one active
 		local weaponOnOff, onOffName
 
 		local unitIsOnOff = unitDef.onOffable --spFindUnitCmdDesc(unitID, 85) ~= nil	-- if this unit can toggle weapons
@@ -835,6 +864,12 @@ local function AddSelectedUnit(unitID, mouseover)
 		elseif unitIsOnOff and onOffName then -- this is a unit or building with 2 weapons
 			weaponOnOff = unitsOnOff[unitID] or 0
 			drawIt = ((weaponOnOff + 1) == j) -- remember weaponOnOff is 0 or 1, weapon number starts from 1
+		end
+
+		-- we add checks here for the display toggle status from config
+		if unitToggles[unitName] then -- only if there's a config, else default is to draw it
+			local wToggleStatuses = unitToggles[unitName][allystring]
+			drawIt = wToggleStatuses[j] and drawIt
 		end
 
 		local ringParams = unitDefRings[unitDef.id]['rings'][j]
@@ -860,14 +895,21 @@ local function AddSelectedUnit(unitID, mouseover)
 				end
 			end
 			local instanceID = 10000000 * (mouseover and 1 or 0) + 1000000 * weaponType + unitID +
-			100000 * j                                                                               -- weapon index needs to be included here for uniqueness
+				100000 *
+				j -- weapon index needs to be included here for uniqueness
 			--Spring.Echo("instanceID created: "..tostring(instanceID))
 			pushElementInstance(attackRangeVAOs[vaokey], cacheTable, instanceID, true, false, unitID)
 			addedRings = addedRings + 1
 			if collections[unitID] == nil then
 				--lazy creation
-				collections[unitID] = { posx = mpx, posy = mpy, posz = mpz, vaokeys = {}, allied = alliedUnit,
-					unitDefID = unitDef.id }
+				collections[unitID] = {
+					posx = mpx,
+					posy = mpy,
+					posz = mpz,
+					vaokeys = {},
+					allied = alliedUnit,
+					unitDefID = unitDef.id
+				}
 			end
 			collections[unitID].vaokeys[instanceID] = vaokey
 		end
@@ -1118,7 +1160,8 @@ local function RefreshEverything()
 	widget:Initialize()
 end
 
-local function ToggleUnitDisplay()
+-- direction should be 1 or -1 (next or previous bitmap value)
+local function CycleUnitDisplay(direction)
 	if (selUnitCount > 1) or (selUnitCount == 0) then
 		Spring.Echo("Please select only one unit to change display setting!")
 		return
@@ -1134,18 +1177,42 @@ local function ToggleUnitDisplay()
 		return
 	end
 	local name = unitDef.name
-
+	local wToggleStatuses = {}
+	local newToggleStatuses = {}
 	unitToggles[name] = unitToggles[name] or {}
 	if not unitToggles[name][allystring] then -- default toggle is on, we set it to off (0)
-		unitToggles[name][allystring] = 0
-	else                                   -- there's already something stored here so we toggle this value
-		unitToggles[name][allystring] = (unitToggles[name][allystring] + 1) % 2
+		for i = 1, #unitDefRings[unitDef.id].weapons do
+			wToggleStatuses[i] = true      -- every ring defined weapon is on by default
+		end
+		newToggleStatuses = getNextWeaponCombination(wToggleStatuses, direction)
+		unitToggles[name][allystring] = newToggleStatuses
+	else -- there's already something stored here so we toggle this value
+		wToggleStatuses = unitToggles[name][allystring]
+		newToggleStatuses = getNextWeaponCombination(wToggleStatuses, direction)
+		unitToggles[name][allystring] = newToggleStatuses
 	end
-	Spring.Echo("Changed range display of " .. name .. " to " .. tostring(unitToggles[name][allystring]))
+	local bitmap = convertToBitmap(newToggleStatuses)
+	local maxConfigBitmap = 2 ^ #newToggleStatuses - 1
+	-- some crude info display for now
+	Spring.Echo("Changed range display of " .. name ..
+		" to config " .. tostring(bitmap) ..
+		": ".. tableToString(unitToggles[name][allystring]))
+
 	-- write toggle changes to file
-	table.save(unitToggles, "LuaUI/config/AttackRangeConfig.lua", "--Attack Range Display Configuration")
-	-- play a sound cue
-	Spring.PlaySoundFile('Sounds/commands/cmd-defaultweapon.wav', 0.3, 'ui')
+	table.save(unitToggles, "LuaUI/config/AttackRangeConfig2.lua", "--Attack Range Display Configuration (v2)")
+	-- play a sound cue based on status bitmap state: max means all on, 0 means all off
+	local soundEffect = 'Sounds/commands/cmd-defaultweapon.wav'
+	local soundEffectOn = 'Sounds/commands/cmd-on.wav'
+	local soundEffectOff = 'Sounds/commands/cmd-off.wav'
+	local volume = 0.3
+	if bitmap == maxConfigBitmap then
+		soundEffect = soundEffectOn
+		volume = 1.0
+	elseif bitmap == 0 then
+		soundEffect = soundEffectOff
+		volume = 0.6
+	end
+	Spring.PlaySoundFile(soundEffect, volume, 'ui')
 
 	RefreshEverything()
 end
@@ -1162,7 +1229,10 @@ function widget:KeyPress(key, mods, isRepeat)
 		shifted = true
 	end
 	if key == 46 and mods.alt then
-		ToggleUnitDisplay()
+		CycleUnitDisplay(1) -- cycle forward
+	end
+	if key == 44 and mods.alt then
+		CycleUnitDisplay(-1) -- cycle backward
 	end
 end
 
@@ -1250,12 +1320,12 @@ local function DRAWRINGS(primitiveType, linethickness)
 			local iT = attackRangeVAOs[atkRangeClass]
 			stencilMask = 2 ^ (4 * (i - 1) + (j - 1)) -- from 1 to 128
 			drawcounts[stencilMask] = iT.usedElements
-			if iT.usedElements > 0 then   --and buttonConfig[allyState][wt] then
+			if iT.usedElements > 0 then      --and buttonConfig[allyState][wt] then
 				if linethickness then
 					glLineWidth(colorConfig[wt][linethickness] * cameraHeightFactor)
 				end
-				glStencilMask(stencilMask)                              -- only allow these bits to get written
-				glStencilFunc(GL_NOTEQUAL, stencilMask, stencilMask)    -- what to do with the stencil
+				glStencilMask(stencilMask)                                  -- only allow these bits to get written
+				glStencilFunc(GL_NOTEQUAL, stencilMask, stencilMask)        -- what to do with the stencil
 				iT.VAO:DrawArrays(primitiveType, iT.numVertices, 0, iT.usedElements, 0) -- +1!!!
 			end
 		end
@@ -1268,7 +1338,7 @@ local function DRAWRINGS(primitiveType, linethickness)
 		local stencilOffset = cannon_separate_stencil and 3 or 0
 		stencilMask = 2 ^ (4 * (i - 1) + stencilOffset) -- if 0 then it's on the same as "ground"
 		drawcounts[stencilMask] = iT.usedElements
-		if iT.usedElements > 0 then              --and buttonConfig[allyState]["ground"] then
+		if iT.usedElements > 0 then               --and buttonConfig[allyState]["ground"] then
 			if linethickness then
 				glLineWidth(colorConfig['cannon'][linethickness] * cameraHeightFactor)
 			end
