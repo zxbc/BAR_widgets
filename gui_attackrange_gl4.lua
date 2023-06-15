@@ -1435,6 +1435,7 @@ function widget:UnitDestroyed(unitID, unitDefID, unitTeam, attackerID, attackerD
 	local unitDef = UnitDefs[unitDefID]
 	if unitTeam == myAllyTeam and isBuilder(unitDef) then
 		builders[unitID] = nil
+		RemoveSelectedUnit(unitID, false)
 	end
 end
 
