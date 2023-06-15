@@ -1,7 +1,7 @@
 function widget:GetInfo()
     return {
         name = "Commander Dgun Walk Fix",
-        desc = "Stops commander from wandering into dgun target after firing dgun.",
+        desc = "Stops commander from wandering into dgun target after firing dgun in certain funny angles.",
         author = "Errrrrrr",
         date = "June 2023",
         license = "GNU GPL, v2 or later",
