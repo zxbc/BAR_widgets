@@ -215,12 +215,10 @@ local function initializeUnitDefRing(unitDefID)
 
 			local isCylinder = weaponDef.cylinderTargeting and 1 or 0
 			local isDgun = (weaponDef.type == "DGun") and 1 or 0
-			-- debug shit
-			--[[ 			local wDef = {}
-			for name,param in weaponDef:pairs() do
-				wDef[name]=param
+			if isDgun == 1 then
+				--Spring.Echo("dgun found, range in weaponDef is: "..weaponDef.range)
 			end
-			Spring.Echo("wDef: "..tableToString(wDef)) ]]
+
 
 			local customParams = weaponDef.customParams
 			local wName = weaponDef.name
@@ -780,8 +778,17 @@ local function AddSelectedUnit(unitID, mouseover)
 			local weaponDefID = weapons[weaponNum].weaponDef
 			local weaponDef = WeaponDefs[weaponDefID]
 			local range = weaponDef.range
+			local weapon = weapons[weaponNum]
+
+			-- debug shit
+--[[ 			local weaponTable = {}
+			for name,param in pairs(weapon.onlyTargets) do--:pairs() do
+				weaponTable[name]=param
+			end ]]
+			--Spring.Echo("----------weaponDef:   "..tableToString(weaponTable))
 			if range > 0 then
-				if weaponDef.description:find("g2a") and not weaponDef.description:find("g2g") then
+				--if weaponDef.description:find("g2a") and not weaponDef.description:find("g2g") then
+				if  weapon.onlyTargets and weapon.onlyTargets.vtol then
 					--Spring.Echo("AA? " .. weaponDef.name..": "..tostring(weaponDef.description))
 					entry.weapons[weaponNum] = 3 -- weaponTypeMap[3] is "AA"
 					--Spring.Echo("added AA weapon: ".. weaponDef.name)
