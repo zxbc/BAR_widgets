@@ -15,7 +15,7 @@ end
 
 --------------------------------------------------------------------------------
 --------------------------------------------------------------------------------
-
+local unitArray = {}
 local unitName = {}
 for udid, ud in pairs(UnitDefs) do
 	unitName[udid] = ud.name
@@ -94,13 +94,16 @@ end
 
 function widget:UnitFinished(unitID, unitDefID, unitTeam)
 	local cmdOpts = GetCmdOpts(false,false,false,false,false)
-	local altOpts = GetCmdOpts(true, false, false, false, false)
+	--local altOpts = GetCmdOpts(true, false, false, false, false)
 
 	local name = unitName[unitDefID]
+	--local unitDef = UnitDefs[unitDefID]
+
 	unitSet[name] = unitSet[unitName[unitDefID]] or {}
 	if unitTeam == Spring.GetMyTeamID() then
 		for cmdID, cmdParam in pairs(unitSet[name]) do
-			Spring.GiveOrderToUnit(unitID, CMD.INSERT, {0, cmdID, cmdOpts.coded, cmdParam }, altOpts)
+			local success = Spring.GiveOrderToUnit(unitID, cmdID, {cmdParam}, cmdOpts)
+			--Spring.Echo("".. name .. ", " .. tostring(cmdID) .. ", " .. tostring(cmdParam) .. " success: ".. tostring(success))
 		end
 	end
 end
