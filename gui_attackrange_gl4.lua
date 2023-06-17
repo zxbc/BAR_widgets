@@ -845,7 +845,8 @@ local function AddSelectedUnit(unitID, mouseover)
 
 	--for weaponNum = 1, #weapons do
 	local addedRings = 0
-	for j, weaponType in pairs(unitDefRings[unitDef.id]['weapons']) do
+	local weapons = unitDefRings[unitDef.id]['weapons']
+	for j, weaponType in pairs(weapons) do
 		local drawIt = true
 		-- we need to check if the unit has on/off weapon states, and only add the one active
 		local weaponOnOff, onOffName
@@ -863,7 +864,7 @@ local function AddSelectedUnit(unitID, mouseover)
 			drawIt = (weaponOnOff == 1)
 		elseif unitIsOnOff and onOffName then -- this is a unit or building with 2 weapons
 			weaponOnOff = unitsOnOff[unitID] or 0
-			drawIt = ((weaponOnOff + 1) == j) -- remember weaponOnOff is 0 or 1, weapon number starts from 1
+			drawIt = ((weaponOnOff + 1) == j) or #weapons == 1 -- remember weaponOnOff is 0 or 1, weapon number starts from 1
 		end
 
 		-- we add checks here for the display toggle status from config
