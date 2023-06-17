@@ -93,7 +93,7 @@ function widget:CommandNotify(cmdID, cmdParams, cmdOpts)
 end
 
 function widget:UnitFinished(unitID, unitDefID, unitTeam)
-	local cmdOpts = GetCmdOpts(false,false,false,false,false)
+	local cmdOpts = GetCmdOpts(false,false,false,true,false)
 	--local altOpts = GetCmdOpts(true, false, false, false, false)
 
 	local name = unitName[unitDefID]
@@ -102,6 +102,7 @@ function widget:UnitFinished(unitID, unitDefID, unitTeam)
 	unitSet[name] = unitSet[unitName[unitDefID]] or {}
 	if unitTeam == Spring.GetMyTeamID() then
 		for cmdID, cmdParam in pairs(unitSet[name]) do
+			if cmdID == 115 then return end	-- we're skipping "repeat" command here for now
 			local success = Spring.GiveOrderToUnit(unitID, cmdID, {cmdParam}, cmdOpts)
 			--Spring.Echo("".. name .. ", " .. tostring(cmdID) .. ", " .. tostring(cmdParam) .. " success: ".. tostring(success))
 		end
