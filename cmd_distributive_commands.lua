@@ -227,10 +227,9 @@ end
 
 function distributeLongest(_, _, args)
   --if not heldDown then return end
-
   local unitID, commands = GetUnitWithLongestQueue()
       
-  if commands then
+  if commands and #commands > 1 then
     cmdStash = commands
     updateNodes()
     executeCommands(true)
@@ -253,11 +252,11 @@ function widget:KeyPress(key, mods, isRepeat)
       toggleSplitAreaMode()
     end ]]
 
-    if key == 308 then
+    if key == 308 and mods.shift then
       distributeLongest()
     end
 
-    if key == 32 then
+    if key == 32 and mods.shift then
       distribute()
     end
 
