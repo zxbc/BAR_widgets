@@ -3,7 +3,7 @@ function widget:GetInfo()
         name    = "Single Volley Attack Mode",
         desc    = "Sets units to single volley attack mode. Shift + q to toggle.",
         author  = "Errrrrrr",
-        date    = "May 20, 2023",
+        date    = "June 19, 2023",
         license = "GNU GPL, v2 or later",
         version = "1.0",
         layer   = 9999,
