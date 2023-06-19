@@ -1,7 +1,7 @@
 function widget:GetInfo()
     return {
         name    = "Single Volley Attack Mode",
-        desc    = "Sets units to single volley attack mode. Shift + q to toggle.",
+        desc    = "Sets units to single volley attack mode. Alt + q to toggle on a unit.",
         author  = "Errrrrrr",
         date    = "June 19, 2023",
         license = "GNU GPL, v2 or later",
