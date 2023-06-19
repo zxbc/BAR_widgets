@@ -19,6 +19,12 @@ local max_builders_affected = 8
 
 local selectedUnits = {}
 
+local spGetUnitPosition = Spring.GetUnitPosition
+local spGetCommandQueue = Spring.GetCommandQueue
+local spGetFeaturePosition = Spring.GetFeaturePosition
+local spGetUnitDefID = Spring.GetUnitDefID
+local spGiveOrderToUnit = Spring.GiveOrderToUnit
+
 function widget:Initialize()
     selectedUnits = Spring.GetSelectedUnits()
 end
@@ -52,6 +58,44 @@ local function canBuild(builderDefID, targetDefID)
     return false -- Builder cannot build the target unit
 end
 
+local function GetUnitFinalPosition(uID)
+
+    local ux, uy, uz = spGetUnitPosition(uID)
+
+    local cmds = spGetCommandQueue(uID,5000)
+	if cmds then
+		for i = #cmds, 1, -1 do
+
+			local cmd = cmds[i]
+			if (cmd.id < 0) or positionCmds[cmd.id] then
+
+				local params = cmd.params
+				if #params >= 3 then
+					return params[1], params[2], params[3]
+				else
+					if #params == 1 then
+
+						local pID = params[1]
+						local px, py, pz
+
+						if pID > maxUnits then
+							px, py, pz = spGetFeaturePosition(pID - maxUnits)
+						else
+							px, py, pz = spGetUnitPosition(pID)
+						end
+
+						if px then
+							return px, py, pz
+						end
+					end
+				end
+			end
+		end
+	end
+
+    return ux, uy, uz
+end
+
 function widget:CommandNotify(cmdID, cmdParams, cmdOpts)
     if #selectedUnits > max_builders_affected then return end
     if #cmdParams < 3 then return end
@@ -73,7 +117,7 @@ function widget:CommandNotify(cmdID, cmdParams, cmdOpts)
     local assistants = {}
     --local assistDefs = {}
     for _, unitID in ipairs(selectedUnits) do
-        local unitDefID = Spring.GetUnitDefID(unitID)
+        local unitDefID = spGetUnitDefID(unitID)
         if canBuild(unitDefID, buildID) and IsBuilder(UnitDefs[unitDefID]) then
             table.insert(builders, unitID)
             isABuilder[unitID] = true
@@ -93,9 +137,9 @@ function widget:CommandNotify(cmdID, cmdParams, cmdOpts)
     for _, unitID in ipairs(assistants) do
         local x, y, z
         if cmdOpts.shift then
-            x, y, z = Spring.GetUnitFinalPosition(unitID)
+            x, y, z = GetUnitFinalPosition(unitID)
         else
-            x, y, z = Spring.GetUnitPosition(unitID)
+            x, y, z = spGetUnitPosition(unitID)
         end
         local builderPos = { x, y, z }
 
@@ -125,20 +169,20 @@ function widget:CommandNotify(cmdID, cmdParams, cmdOpts)
         -- detect if command is inserted or not
         if not cmdOpts.meta then
             -- issue command move
-            Spring.GiveOrderToUnit(unitID, CMD.MOVE, buildTargetPos, cmdOpts)
+            spGiveOrderToUnit(unitID, CMD.MOVE, buildTargetPos, cmdOpts)
             -- Spring.Echo("Moving builder to: " .. buildTargetPos[1] .. ", " .. buildTargetPos[2] .. ", " .. buildTargetPos[3])
             -- let's also draw something shiny at the location we want to move to
             --Spring.MarkerAddPoint(buildTargetPos[1], buildTargetPos[2], buildTargetPos[3], "*")
 
             -- we add build command if it's the mainBuilder, otherwise we add assist command
-            Spring.GiveOrderToUnit(unitID, cmdID, cmdParams, { "shift" })
+            spGiveOrderToUnit(unitID, cmdID, cmdParams, { "shift" })
         else
-            Spring.GiveOrderToUnit(unitID, CMD.INSERT,
+            spGiveOrderToUnit(unitID, CMD.INSERT,
                 { 0, CMD.MOVE, CMD.OPT_SHIFT, buildTargetPos[1], buildTargetPos[2], buildTargetPos[3] }, { "alt" })
             --Spring.MarkerAddPoint(buildTargetPos[1], buildTargetPos[2], buildTargetPos[3], "*")
 
 
-            Spring.GiveOrderToUnit(unitID, CMD.INSERT,
+            spGiveOrderToUnit(unitID, CMD.INSERT,
                 { 1, cmdID, CMD.OPT_SHIFT, cmdParams[1], cmdParams[2], cmdParams[3] }, { "alt" })
         end
     end
