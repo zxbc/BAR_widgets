@@ -60,10 +60,10 @@ function widget:Update(dt)
         for unitID, reloadFrame in pairs(overWatched) do
             local currentReloadFrame = Spring.GetUnitWeaponState(unitID, 1, "reloadFrame")
             if currentReloadFrame ~= reloadFrame then
-                -- if it is different, then the unit has fired, so remove it from the table
+                -- if it is different, then the unit has fired, update the table with the new reloadFrame
                 --Spring.Echo("Unit "..tostring(unitID).." has fired volley at gameFrame: "..tostring(gameFrame))
                 overWatched[unitID] = currentReloadFrame
-                -- remove the current command from queue if it is an area attack command
+                -- remove the current command from queue if it is an attack ground command
                 local commands = Spring.GetUnitCommands(unitID, -1)
                 if #commands > 0 then
                     local cmdID = commands[1].id
@@ -92,7 +92,7 @@ function widget:DrawWorld()
         gl.Billboard()
         gl.Color(1, 1, 1, 1)
         gl.Texture(icon)
-        gl.TexRect(-40, 10, -10, 40)
+        gl.TexRect(-40, 10, -20, 30)
         gl.PopMatrix()
     end
 end
