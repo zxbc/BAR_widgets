@@ -97,3 +97,8 @@ function widget:DrawWorld()
     end
 end
 
+-- if unit is destroyed, remove it from overWatched table
+function widget:UnitDestroyed(unitID, unitDefID, unitTeam)
+    overWatched[unitID] = nil
+end
+
