@@ -53,7 +53,7 @@ local colorConfig = {
 	distanceScaleEnd = 5000,       -- Linewidth becomes 50% above this camera height
 	ground = {
 		color = { 1.0, 0.22, 0.05, 0.60 },
-		fadeparams = { 1200, 1800, 1.0, 0.0 }, -- FadeStart, FadeEnd, StartAlpha, EndAlpha
+		fadeparams = { 1500, 2200, 1.0, 0.0 }, -- FadeStart, FadeEnd, StartAlpha, EndAlpha
 		groupselectionfadescale = group_selection_fade_scale,
 		externallinethickness = 3.0,
 		internallinethickness = 2.0,
@@ -67,14 +67,14 @@ local colorConfig = {
 	},
 	AA = {
 		color = { 0.8, 0.44, 2.0, 0.40 },
-		fadeparams = { 1200, 1800, 1.0, 0.0 }, -- FadeStart, FadeEnd, StartAlpha, EndAlpha
+		fadeparams = { 1500, 2200, 1.0, 0.0 }, -- FadeStart, FadeEnd, StartAlpha, EndAlpha
 		groupselectionfadescale = group_selection_fade_scale,
 		externallinethickness = 2.5,
 		internallinethickness = 2.0,
 	},
 	cannon = {
 		color = { 1.0, 0.22, 0.05, 0.60 },
-		fadeparams = { 1200, 1800, 1.0, 0.0 }, -- FadeStart, FadeEnd, StartAlpha, EndAlpha
+		fadeparams = { 1500, 2200, 1.0, 0.0 }, -- FadeStart, FadeEnd, StartAlpha, EndAlpha
 		groupselectionfadescale = group_selection_fade_scale,
 		externallinethickness = 3.0,
 		internallinethickness = 2.0,
@@ -655,7 +655,12 @@ local vsSrc = [[
 		float distToCam = length(modelWorldPos.xyz - camPos.xyz); //dist from cam
 		// FadeStart, FadeEnd, StartAlpha, EndAlpha
 		float fadeDist = visibility.y - visibility.x;
-		FADEALPHA  = clamp((visibility.y + fadeDistOffset - distToCam)/(fadeDist),visibility.w,visibility.z);
+		if (ISDGUN > 0.5) {
+			FADEALPHA  = clamp((visibility.y + fadeDistOffset + 4000 - distToCam)/(fadeDist),visibility.w,visibility.z);
+		} else {
+			FADEALPHA  = clamp((visibility.y + fadeDistOffset - distToCam)/(fadeDist),visibility.w,visibility.z);
+		}
+		//FADEALPHA  = clamp((visibility.y + fadeDistOffset - distToCam)/(fadeDist),visibility.w,visibility.z);
 	
 		//--- Optimize by anything faded out getting transformed back to origin with 0 range?
 		//seems pretty ok!
@@ -699,6 +704,9 @@ local vsSrc = [[
 		//lets blend the alpha here, and save work in FS:
 		float outalpha = OUTOFBOUNDSALPHA * (MOUSEALPHA + FADEALPHA *  lineAlphaUniform);
 		blendedcolor.a *= outalpha ;
+		if (ISDGUN > 0.5) {
+			blendedcolor.a = clamp(blendedcolor.a * 3, 0.1, 1.0);
+		}
 		//blendedcolor.rgb = vec3(fract(distToCam/100));
 	}
 	]]
@@ -862,9 +870,10 @@ local function AddSelectedUnit(unitID, mouseover)
 		if unitIsOnOff and not onOffName then -- if it's a building with actual on/off, we display range if it's on
 			weaponOnOff = unitsOnOff[unitID] or 1
 			drawIt = (weaponOnOff == 1)
-		elseif unitIsOnOff and onOffName then -- this is a unit or building with 2 weapons
+		elseif unitIsOnOff and onOffName then         -- this is a unit or building with 2 weapons
 			weaponOnOff = unitsOnOff[unitID] or 0
-			drawIt = ((weaponOnOff + 1) == j) or #weapons == 1 -- remember weaponOnOff is 0 or 1, weapon number starts from 1
+			drawIt = ((weaponOnOff + 1) == j) or
+			#weapons == 1                             -- remember weaponOnOff is 0 or 1, weapon number starts from 1
 		end
 
 		-- we add checks here for the display toggle status from config
@@ -1197,7 +1206,7 @@ local function CycleUnitDisplay(direction)
 	-- some crude info display for now
 	Spring.Echo("Changed range display of " .. name ..
 		" to config " .. tostring(bitmap) ..
-		": ".. tableToString(unitToggles[name][allystring]))
+		": " .. tableToString(unitToggles[name][allystring]))
 
 	-- write toggle changes to file
 	table.save(unitToggles, "LuaUI/config/AttackRangeConfig2.lua", "--Attack Range Display Configuration (v2)")
