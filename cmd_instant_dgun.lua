@@ -225,6 +225,8 @@ function widget:KeyPress(key, mods, isRepeat)
     end ]]
     if not enabled or #selectedUnits == 0 then return false end
     if isChatActive() then return false end
+    if isBuildKey[key] then return false end
+
 
     --echo("key = " .. tostring(key))
 
