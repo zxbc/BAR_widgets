@@ -58,6 +58,14 @@ local function canBuild(builderDefID, targetDefID)
     return false -- Builder cannot build the target unit
 end
 
+-- What commands can be issued at a position or unit/feature ID (Only used by GetUnitPosition)
+local CMD_SETTARGET = 34923
+local positionCmds = {
+    [CMD.MOVE]=true,		[CMD.ATTACK]=true,		[CMD.RECLAIM]=true,		[CMD.RESTORE]=true,		[CMD.RESURRECT]=true,
+    [CMD.PATROL]=true,		[CMD.CAPTURE]=true,		[CMD.FIGHT]=true, 		[CMD.MANUALFIRE]=true,
+    [CMD.UNLOAD_UNIT]=true,	[CMD.UNLOAD_UNITS]=true,[CMD.LOAD_UNITS]=true,	[CMD.GUARD]=true,		[CMD.AREA_ATTACK] = true,
+    [CMD_SETTARGET] = true -- set target
+}
 local function GetUnitFinalPosition(uID)
 
     local ux, uy, uz = spGetUnitPosition(uID)
