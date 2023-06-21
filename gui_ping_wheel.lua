@@ -29,6 +29,7 @@ local pingWheel = { -- the options in the ping wheel, displayed clockwise from 1
     {name = "DEFEND"},
     {name = "HELP"},
     {name = "RETREAT"},
+    {name = "OMGSTOPECO"},
 }
 
 local spamControlFrames = 120   -- how many frames to wait before allowing another ping
@@ -41,6 +42,7 @@ local pingWheelTextColor = {1, 1, 1, 0.6}
 local pingWheelTextSize = 25
 local pingWheelTextHighlightColor = {1, 1, 1, 1}
 local pingWheelTextSpamColor = {0.9, 0.9, 0.9, 0.4}
+local pingWheelFanColor = {0.9, 0.8, 0.5, 0.8}
 
 local displayPingWheel = false
 
@@ -116,7 +118,12 @@ end
 
 -- when mouse is pressed, issue the ping command
 function widget:MousePress(mx, my, button)
-    if displayPingWheel and pingWorldLocation and spamControl == 0 and button == 1 then
+    if displayPingWheel 
+        and pingWorldLocation 
+        and spamControl == 0 
+        and button == 1 
+        and pingWheelSelection ~= 0 
+    then
         --Spring.Echo("pingWheelSelection: " .. pingWheel[pingWheelSelection].name)
         local pingText = pingWheel[pingWheelSelection].name
         Spring.MarkerAddPoint(pingWorldLocation[1], pingWorldLocation[2], pingWorldLocation[3], pingText, false)
@@ -127,7 +134,7 @@ function widget:MousePress(mx, my, button)
         -- play a UI sound to indicate ping was issued
         Spring.PlaySoundFile("sounds/ui/mappoint2.wav", 1, 'ui')
         FlashAndOff()
-    elseif button == 3 then
+    elseif button ~= 1 then
         PingWheelOff()
     end
 
@@ -139,13 +146,31 @@ end
 
 function widget:Update(dt)
     if (gameFrame % 3 == 1) and displayPingWheel then
-        -- calculate where the mouse is to decide which slice of the wheel is selected
+
         local mx, my = spGetMouseState()
         if not pingWheelScreenLocation then
             return
         end
-        local angle = atan2(mx - pingWheelScreenLocation.x, my - pingWheelScreenLocation.y)
-        pingWheelSelection = (floor((angle + pi) / (2 * pi / #pingWheel)) + 3 ) % #pingWheel + 1
+        -- calculate where the mouse is relative to the pingWheelScreenLocation, remember top is the first selection
+        local dx = mx - pingWheelScreenLocation.x
+        local dy = my - pingWheelScreenLocation.y
+        local angle = math.atan2(dy, dx)
+        local angleDeg = floor(angle * 180 / pi + 0.5)
+        if angleDeg < 0 then
+            angleDeg = angleDeg + 360
+        end
+        local selection = (floor((360-angleDeg) / 360 * #pingWheel)+2) % #pingWheel + 1
+        if selection ~= pingWheelSelection then
+            pingWheelSelection = selection
+        end
+
+        -- if the mouse is within 0.75 of the radius, then set pingWheelSelection to nothing
+        local dist = math.sqrt(dx*dx + dy*dy)
+        if dist < 0.75 * pingWheelRadius then
+            pingWheelSelection = 0
+        end
+
+
         --Spring.Echo("pingWheelSelection: " .. pingWheel[pingWheelSelection].name)
 
         flashFrame = (flashFrame == 0) and 0 or (flashFrame - 3)
@@ -184,8 +209,8 @@ function widget:DrawScreen()
         glLineWidth(pingWheelThickness)
 
         local function Circle(r)
-            for i = 1, 64 do
-                local angle = (i - 1) * 2 * math.pi / 64
+            for i = 1, 128 do
+                local angle = (i - 1) * 2 * math.pi / 128
                 glVertex(pingWheelScreenLocation.x + r * sin(angle), pingWheelScreenLocation.y + r * cos(angle))
             end
         end
@@ -204,15 +229,22 @@ function widget:DrawScreen()
         end
         glBeginEnd(GL_POINTS, Dot)
 
-        -- draw a line extending from the center to the one being selected
-        local angle = (pingWheelSelection - 1) * 2 * pi / #pingWheel
-        glColor(pingWheelColor)
-        glLineWidth(pingWheelThickness/2)
-        local function Line()
-            glVertex(pingWheelScreenLocation.x, pingWheelScreenLocation.y)
-            glVertex(pingWheelScreenLocation.x + pingWheelRadius * sin(angle), pingWheelScreenLocation.y + pingWheelRadius * cos(angle))
+        -- draw two lines denoting the delineation of the slices of the currently selected slice
+        -- first angle should be half a selection ahead of the current selection
+        -- second angle should be half a selection behind of the current selection
+        -- only draw if pingWheelSelection is not 0
+        if pingWheelSelection ~= 0 then
+            local angle1 = (pingWheelSelection -0.5) * 2 * pi / #pingWheel
+            local angle2 = (pingWheelSelection -1.5) * 2 * pi / #pingWheel
+            glColor(pingWheelFanColor)
+            glLineWidth(pingWheelThickness * 0.3)
+            local function Line(angle)
+                glVertex(pingWheelScreenLocation.x, pingWheelScreenLocation.y)
+                glVertex(pingWheelScreenLocation.x + pingWheelRadius * 1.3 * sin(angle), pingWheelScreenLocation.y + pingWheelRadius * 1.3 * cos(angle))
+            end
+            glBeginEnd(GL_LINES, Line, angle2)
+            glBeginEnd(GL_LINES, Line, angle1)
         end
-        glBeginEnd(GL_LINES, Line)
 
         -- draw the text for each slice and highlight the selected one
         -- also flash the text color to indicate ping was issued
@@ -222,19 +254,23 @@ function widget:DrawScreen()
         else
             textColor = pingWheelTextHighlightColor
         end
+        local angle = (pingWheelSelection -1) * 2 * pi / #pingWheel
         glColor(textColor)
-        glText(pingWheel[pingWheelSelection].name, pingWheelScreenLocation.x + pingWheelRadius * sin(angle), pingWheelScreenLocation.y + pingWheelRadius * cos(angle), pingWheelTextSize, "co")
-        
+        if pingWheelSelection ~= 0 then
+            glText(pingWheel[pingWheelSelection].name, pingWheelScreenLocation.x + pingWheelRadius * sin(angle), pingWheelScreenLocation.y + pingWheelRadius * cos(angle), pingWheelTextSize, "co")
+        end
+
         glColor(pingWheelTextColor)
         if spamControl > 0 then
             glColor(pingWheelTextSpamColor)
         end
         for i = 1, #pingWheel do
-            if i ~= pingWheelSelection then
+            if i ~= pingWheelSelection or pingWheelSelection == 0 then
                 angle = (i - 1) * 2 * math.pi / #pingWheel
                 glText(pingWheel[i].name, pingWheelScreenLocation.x + pingWheelRadius * math.sin(angle), pingWheelScreenLocation.y + pingWheelRadius * math.cos(angle), pingWheelTextSize, "co")
             end
         end
+        glLineWidth(1)
         glPopMatrix()
     end
 end
