@@ -31,7 +31,7 @@ local pingWheel = { -- the options in the ping wheel, displayed clockwise from 1
     {name = "RETREAT"},
 }
 
-local spamControlFrames = 120
+local spamControlFrames = 120   -- how many frames to wait before allowing another ping
 local viewSizeX, viewSizeY = Spring.GetViewGeometry()
 local pingWheelRadius = 0.1 * math.min(viewSizeX, viewSizeY)    -- 10% of the screen size
 local pingWheelThickness = 5    -- thickness of the ping wheel line drawing
@@ -40,7 +40,7 @@ local pingWheelColor = {0.9, 0.8, 0.5, 0.6}
 local pingWheelTextColor = {1, 1, 1, 0.6}
 local pingWheelTextSize = 25
 local pingWheelTextHighlightColor = {1, 1, 1, 1}
-local pingWheelTextSpamColor = {0.8, 0.6, 0.6, 0.5}
+local pingWheelTextSpamColor = {0.9, 0.9, 0.9, 0.4}
 
 local displayPingWheel = false
 
@@ -74,7 +74,7 @@ function SetPingLocation()
         pingWheelScreenLocation = { x = mx, y = my }
 
         -- play a UI sound to indicate wheel is open
-        Spring.PlaySoundFile("sounds/ui/old_multiselect.wav", 0.5, 'ui')
+        Spring.PlaySoundFile("sounds/ui/beep4.wav", 0.5, 'ui')
     end
 end
 
@@ -110,16 +110,13 @@ function widget:KeyPress(key, mods, isRepeat)
 end
 
 function widget:KeyRelease(key, mods)
-    if not custom_keybind_mode then
-        if key == 102 then
-            PingWheelOff()
-        end
-    end
+    -- making sure weird lingering display doesn't happen with custom keybind!
+    PingWheelOff()
 end
 
 -- when mouse is pressed, issue the ping command
 function widget:MousePress(mx, my, button)
-    if displayPingWheel and pingWorldLocation and spamControl == 0 then
+    if displayPingWheel and pingWorldLocation and spamControl == 0 and button == 1 then
         --Spring.Echo("pingWheelSelection: " .. pingWheel[pingWheelSelection].name)
         local pingText = pingWheel[pingWheelSelection].name
         Spring.MarkerAddPoint(pingWorldLocation[1], pingWorldLocation[2], pingWorldLocation[3], pingText, false)
@@ -130,7 +127,10 @@ function widget:MousePress(mx, my, button)
         -- play a UI sound to indicate ping was issued
         Spring.PlaySoundFile("sounds/ui/mappoint2.wav", 1, 'ui')
         FlashAndOff()
+    elseif button == 3 then
+        PingWheelOff()
     end
+
 end
 
 function widget:GameFrame(gf)
@@ -141,6 +141,9 @@ function widget:Update(dt)
     if (gameFrame % 3 == 1) and displayPingWheel then
         -- calculate where the mouse is to decide which slice of the wheel is selected
         local mx, my = spGetMouseState()
+        if not pingWheelScreenLocation then
+            return
+        end
         local angle = atan2(mx - pingWheelScreenLocation.x, my - pingWheelScreenLocation.y)
         pingWheelSelection = (floor((angle + pi) / (2 * pi / #pingWheel)) + 3 ) % #pingWheel + 1
         --Spring.Echo("pingWheelSelection: " .. pingWheel[pingWheelSelection].name)
@@ -176,20 +179,27 @@ function widget:DrawScreen()
         glDepthTest(false)
         -- we don't want to blend this with the background
         glBlending(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA)
-        -- draw the wheel
+        -- draw a smooth circle at the pingWheelScreenLocation with 64 vertices
         glColor(pingWheelColor)
         glLineWidth(pingWheelThickness)
-        glBeginEnd(GL_LINE_LOOP, function()
-            for i = 1, #pingWheel do
-                local angle = (i - 1) * 2 * math.pi / #pingWheel
-                glVertex(pingWheelScreenLocation.x + pingWheelRadius * sin(angle), pingWheelScreenLocation.y + pingWheelRadius * cos(angle))
+
+        local function Circle(r)
+            for i = 1, 64 do
+                local angle = (i - 1) * 2 * math.pi / 64
+                glVertex(pingWheelScreenLocation.x + r * sin(angle), pingWheelScreenLocation.y + r * cos(angle))
             end
-        end)
+        end
+
+        glBeginEnd(GL_LINE_LOOP, Circle, pingWheelRadius * 0.75)
+        glLineWidth(0.5)
+        glBeginEnd(GL_LINE_LOOP, Circle, pingWheelRadius)
+        glLineWidth(pingWheelThickness)
+        glBeginEnd(GL_LINE_LOOP, Circle, pingWheelRadius * 1.3)
 
         -- draw a dot at the center denoting where the ping will happen in the world
         glColor(1, 1, 1, 1)
         glPointSize(10)
-        function Dot()
+        local function Dot()
             glVertex(pingWheelScreenLocation.x, pingWheelScreenLocation.y)
         end
         glBeginEnd(GL_POINTS, Dot)
@@ -197,8 +207,8 @@ function widget:DrawScreen()
         -- draw a line extending from the center to the one being selected
         local angle = (pingWheelSelection - 1) * 2 * pi / #pingWheel
         glColor(pingWheelColor)
-        glLineWidth(pingWheelThickness)
-        function Line()
+        glLineWidth(pingWheelThickness/2)
+        local function Line()
             glVertex(pingWheelScreenLocation.x, pingWheelScreenLocation.y)
             glVertex(pingWheelScreenLocation.x + pingWheelRadius * sin(angle), pingWheelScreenLocation.y + pingWheelRadius * cos(angle))
         end
@@ -221,7 +231,7 @@ function widget:DrawScreen()
         end
         for i = 1, #pingWheel do
             if i ~= pingWheelSelection then
-                local angle = (i - 1) * 2 * math.pi / #pingWheel
+                angle = (i - 1) * 2 * math.pi / #pingWheel
                 glText(pingWheel[i].name, pingWheelScreenLocation.x + pingWheelRadius * math.sin(angle), pingWheelScreenLocation.y + pingWheelRadius * math.cos(angle), pingWheelTextSize, "co")
             end
         end
