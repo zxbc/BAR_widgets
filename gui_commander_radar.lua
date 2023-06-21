@@ -98,6 +98,8 @@ function widget:MousePress(x, y, button)
             if not shift then
                 -- we instantly move camera to commander's position
                 Spring.SetCameraTarget(commanderPos[1], commanderPos[2], commanderPos[3], 1)
+                -- also select the commander
+                Spring.SelectUnitArray({ commanderID })
                 return true
             else
                 dragging = true
@@ -278,7 +280,7 @@ local function DrawRadar()
         gl.Color(1, 0.8, 0.8, 1)
         minMaxString = " (" .. (detectionRadius == minDetectionRadius and "min" or "max") .. ")"
     end
-    gl.Text("Radar range: " .. string.format("%.2f", detectionRadius) .. minMaxString, x1, y2 + 12, 12, "o")
+    gl.Text("RANGE:  " .. string.format("%.2f", detectionRadius) .. minMaxString, x1, y2 + 8, 11, "O")
 
     --gl.Text("Radar range: " .. string.format("%.2f", detectionRadius), x1, y2 + 12, 12, "o")
 end
