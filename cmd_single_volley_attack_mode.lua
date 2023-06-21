@@ -5,7 +5,7 @@ function widget:GetInfo()
         author  = "Errrrrrr",
         date    = "June 19, 2023",
         license = "GNU GPL, v2 or later",
-        version = "1.0",
+        version = "1.1",
         layer   = 9999,
         enabled = true,
         handler = true
@@ -19,11 +19,14 @@ end
 ---------------------------------------------------------------------------
 local custom_keybind_mode = false
 
+local degen_mode = false   -- for the truly degenerate
 
 local gameFrame = 0
 local overWatched = {}  -- this table contains all the units that are on single volley mode
+local myAllyTeamID
 
 function widget:Initialize()
+    myAllyTeamID = Spring.GetMyAllyTeamID()
     widgetHandler.actionHandler:AddAction(self, "single_volley_attack_toggle", SingleVolleyAttackToggle, nil, "p")
 end
 
@@ -85,6 +88,9 @@ end
 local icon = "LuaUI/Images/groupicons/weaponexplo.png"
 -- draw this icon at the top left corner of the unit's model in the world if it is on single volley mode
 function widget:DrawWorld()
+    -- degens don't need graphics
+    if degen_mode then return end
+
     for unitID, reloadFrame in pairs(overWatched) do
         local x, y, z = Spring.GetUnitPosition(unitID)
         gl.PushMatrix()
@@ -102,3 +108,26 @@ function widget:UnitDestroyed(unitID, unitDefID, unitTeam)
     overWatched[unitID] = nil
 end
 
+-- add new units to overWatched table if degen_mode
+function widget:UnitCreated(unitID, unitDefID, unitTeam)
+    if degen_mode and unitTeam == myAllyTeamID then
+        local reloadFrame = Spring.GetUnitWeaponState(unitID, 1, "reloadFrame")
+        overWatched[unitID] = reloadFrame
+    end
+end
+
+-- add gifted units also
+function widget:UnitGiven(unitID, unitDefID, unitTeam, oldTeam)
+    if degen_mode and unitTeam == myAllyTeamID then
+        local reloadFrame = Spring.GetUnitWeaponState(unitID, 1, "reloadFrame")
+        overWatched[unitID] = reloadFrame
+    end
+end
+
+-- add units captured too, because we're truly degenerate
+function widget:UnitCaptured(unitID, unitDefID, unitTeam, oldTeam)
+    if degen_mode and unitTeam == myAllyTeamID then
+        local reloadFrame = Spring.GetUnitWeaponState(unitID, 1, "reloadFrame")
+        overWatched[unitID] = reloadFrame
+    end
+end
