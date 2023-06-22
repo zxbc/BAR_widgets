@@ -5,10 +5,9 @@ function widget:GetInfo()
         author  = "Errrrrrr",
         date    = "June 21, 2023",
         license = "GNU GPL, v2 or later",
-        version = "1.0",
+        version = "2.0",
         layer   = 999999,
         enabled = true,
-        handler = true
     }
 end
 
@@ -21,7 +20,9 @@ end
 --
 -- You can add or change the options in the pingWheel table.
 -----------------------------------------------------------------------------------------------
-local custom_keybind_mode = false   -- set to true for custom keybind
+local custom_keybind_mode = false  -- set to true for custom keybind
+
+local player_color_mode = true  -- set to false to use pingWheelColor instead of player color
 
 local pingWheel = { -- the options in the ping wheel, displayed clockwise from 12 o'clock
     {name = "ATTACK"},
@@ -30,12 +31,14 @@ local pingWheel = { -- the options in the ping wheel, displayed clockwise from 1
     {name = "HELP"},
     {name = "RETREAT"},
     {name = "OMGSTOPECO"},
+    {name = "OMW"},
 }
 
-local spamControlFrames = 120   -- how many frames to wait before allowing another ping
+local spamControlFrames = 60   -- how many frames to wait before allowing another ping
 local viewSizeX, viewSizeY = Spring.GetViewGeometry()
 local pingWheelRadius = 0.1 * math.min(viewSizeX, viewSizeY)    -- 10% of the screen size
 local pingWheelThickness = 5    -- thickness of the ping wheel line drawing
+local centerDotSize = 20        -- size of the center dot
 
 local pingWheelColor = {0.9, 0.8, 0.5, 0.6}
 local pingWheelTextColor = {1, 1, 1, 0.6}
@@ -43,15 +46,18 @@ local pingWheelTextSize = 25
 local pingWheelTextHighlightColor = {1, 1, 1, 1}
 local pingWheelTextSpamColor = {0.9, 0.9, 0.9, 0.4}
 local pingWheelFanColor = {0.9, 0.8, 0.5, 0.8}
+local pingWheelPlayerColor = {0.9, 0.8, 0.5, 0.8}
 
+local keyDown = false
 local displayPingWheel = false
 
 local pingWorldLocation
 local pingWheelScreenLocation
-local pingWheelSelection = 1
+local pingWheelSelection = 0
 local spamControl = 0 
 local gameFrame = 0
 local flashFrame = 0
+local flashing = false
 
 -- Speedups
 local spGetMouseState = Spring.GetMouseState
@@ -63,12 +69,18 @@ local sin = math.sin
 local cos = math.cos
 
 function widget:Initialize()
-    widgetHandler.actionHandler:AddAction(self, "ping_wheel_off", PingWheelOff, nil, "r")
-    widgetHandler.actionHandler:AddAction(self, "ping_wheel_on", PingWheelOn, nil, "p")
+    -- add the action handler with argument for press and release using the same function call
+    widgetHandler:AddAction("ping_wheel_on", PingWheelAction, {true}, "p")
+    widgetHandler:AddAction("ping_wheel_on", PingWheelAction, {false}, "r")
+    pingWheelPlayerColor = {Spring.GetTeamColor(Spring.GetMyTeamID())}
+    if player_color_mode then
+        pingWheelColor = pingWheelPlayerColor
+        pingWheelFanColor = pingWheelPlayerColor
+    end
 end
 
 -- Store the ping location in pingWorldLocation
-function SetPingLocation()
+local function SetPingLocation()
     local mx, my = spGetMouseState()
     local _, pos = spTraceScreenRay(mx, my, true)
     if pos then
@@ -76,68 +88,98 @@ function SetPingLocation()
         pingWheelScreenLocation = { x = mx, y = my }
 
         -- play a UI sound to indicate wheel is open
-        Spring.PlaySoundFile("sounds/ui/beep4.wav", 0.5, 'ui')
+        Spring.PlaySoundFile("sounds/ui/beep4.wav", 0.1, 'ui')
     end
 end
 
-function PingWheelOn(_, _, args)
+local function TurnOn(reason)
     -- set pingwheel to display
     displayPingWheel = true
     if not pingWorldLocation then
         SetPingLocation()
     end
+    --Spring.Echo("Turned on: " .. reason)
+    return true
 end
 
-function PingWheelOff(_, _, args)
-    -- set pingwheel to not display
+local function TurnOff(reason)
     if displayPingWheel then
         displayPingWheel = false
         pingWorldLocation = nil
         pingWheelScreenLocation = nil
-        pingWheelSelection = 1
+        pingWheelSelection = 0
+        --Spring.Echo("Turned off: " .. reason)
+        return true
     end
 end
 
+function PingWheelAction(_, _, _, args)
+    if args[1] then
+        keyDown = true
+        --Spring.Echo("keyDown: " .. tostring(keyDown))
+    else
+        --keyDown = false
+        --Spring.Echo("keyDown: " .. tostring(keyDown))
+    end
+end
+
+
 -- sets flashing effect to true and turn off wheel display
-function FlashAndOff()
-    flashFrame = 60
+local function FlashAndOff()
+    flashing = true
+    flashFrame = 30
+    --Spring.Echo("Flashing off: " .. tostring(flashFrame))
 end
 
 function widget:KeyPress(key, mods, isRepeat)
     if not custom_keybind_mode then
-        if key == 102 and mods.alt then -- alt + f
-            PingWheelOn()
+        if key == 102 and mods.alt and not isRepeat then -- alt + f
+            keyDown = true
         end
     end
 end
 
 function widget:KeyRelease(key, mods)
     -- making sure weird lingering display doesn't happen with custom keybind!
-    PingWheelOff()
+    keyDown = false
+    --Spring.Echo("keyDown: " .. tostring(keyDown))
 end
 
--- when mouse is pressed, issue the ping command
 function widget:MousePress(mx, my, button)
-    if displayPingWheel 
+    if button == 1 and keyDown then
+        TurnOn("mouse press")
+        return true -- block all other mouse presses
+    else
+        -- set pingwheel to not display
+        TurnOff("mouse press")
+    end
+end
+
+
+-- when mouse is pressed, issue the ping command
+function widget:MouseRelease(mx, my, button)
+    if button == 1
+        and displayPingWheel
         and pingWorldLocation 
         and spamControl == 0 
-        and button == 1 
-        and pingWheelSelection ~= 0 
     then
-        --Spring.Echo("pingWheelSelection: " .. pingWheel[pingWheelSelection].name)
-        local pingText = pingWheel[pingWheelSelection].name
-        Spring.MarkerAddPoint(pingWorldLocation[1], pingWorldLocation[2], pingWorldLocation[3], pingText, false)
+        if pingWheelSelection > 0 then
+            --Spring.Echo("pingWheelSelection: " .. pingWheel[pingWheelSelection].name)
+            local pingText = pingWheel[pingWheelSelection].name
+            Spring.MarkerAddPoint(pingWorldLocation[1], pingWorldLocation[2], pingWorldLocation[3], pingText, false)
 
-        -- Spam control is necessary!
-        spamControl = spamControlFrames
+            -- Spam control is necessary!
+            spamControl = spamControlFrames
 
-        -- play a UI sound to indicate ping was issued
-        Spring.PlaySoundFile("sounds/ui/mappoint2.wav", 1, 'ui')
-        FlashAndOff()
-    elseif button ~= 1 then
-        PingWheelOff()
+            -- play a UI sound to indicate ping was issued
+            Spring.PlaySoundFile("sounds/ui/mappoint2.wav", 1, 'ui')
+            FlashAndOff()
+        else
+            TurnOff("Selection 0")
+        end
+    else
+        TurnOff("mouse release")
     end
-
 end
 
 function widget:GameFrame(gf)
@@ -173,7 +215,14 @@ function widget:Update(dt)
 
         --Spring.Echo("pingWheelSelection: " .. pingWheel[pingWheelSelection].name)
 
-        flashFrame = (flashFrame == 0) and 0 or (flashFrame - 3)
+        if flashing and displayPingWheel then
+            if flashFrame > 0 then
+                flashFrame = flashFrame - 3
+            else
+                flashing = false
+                TurnOff("flashFrame update")
+            end
+        end
     end
     if (gameFrame % 10 == 1) and spamControl > 0 then
         spamControl = (spamControl == 0) and 0 or (spamControl - 10)
@@ -198,13 +247,23 @@ local GL_SRC_ALPHA = GL.SRC_ALPHA
 local GL_ONE_MINUS_SRC_ALPHA = GL.ONE_MINUS_SRC_ALPHA
 
 function widget:DrawScreen()
+    glPushMatrix()
+
+    -- if keyDown then draw a dot at where mouse is
+    if keyDown and not displayPingWheel then
+        -- draw dot at mouse location
+        local mx, my = spGetMouseState()
+        glColor(pingWheelColor)
+        glPointSize(centerDotSize)
+        glBeginEnd(GL_POINTS, glVertex, mx, my)
+        -- also draw a billboard label next to the mouse saying "Ping Wheel"
+        glColor(1, 1, 1, 1)
+        glText("Ping Wheel", mx + 10, my + 10, 12, "O")
+
+    end
     -- we draw a wheel at the pingWheelScreenLocation divided into #pingWheel slices, with the first slice starting at the top
     if displayPingWheel and pingWheelScreenLocation then
-        glPushMatrix()
-        glDepthTest(false)
-        -- we don't want to blend this with the background
-        glBlending(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA)
-        -- draw a smooth circle at the pingWheelScreenLocation with 64 vertices
+        -- draw a smooth circle at the pingWheelScreenLocation with 128 vertices
         glColor(pingWheelColor)
         glLineWidth(pingWheelThickness)
 
@@ -221,13 +280,10 @@ function widget:DrawScreen()
         glLineWidth(pingWheelThickness)
         glBeginEnd(GL_LINE_LOOP, Circle, pingWheelRadius * 1.3)
 
-        -- draw a dot at the center denoting where the ping will happen in the world
-        glColor(1, 1, 1, 1)
-        glPointSize(10)
-        local function Dot()
-            glVertex(pingWheelScreenLocation.x, pingWheelScreenLocation.y)
-        end
-        glBeginEnd(GL_POINTS, Dot)
+        -- draw the center dot
+        glColor(pingWheelColor)
+        glPointSize(centerDotSize)
+        glBeginEnd(GL_POINTS, glVertex, pingWheelScreenLocation.x, pingWheelScreenLocation.y)
 
         -- draw two lines denoting the delineation of the slices of the currently selected slice
         -- first angle should be half a selection ahead of the current selection
@@ -249,8 +305,8 @@ function widget:DrawScreen()
         -- draw the text for each slice and highlight the selected one
         -- also flash the text color to indicate ping was issued
         local textColor = pingWheelTextColor
-        if flashFrame > 0 and (flashFrame % 5 == 0) then
-            textColor = { 0, 0, 0, 0}
+        if flashing and (flashFrame % 5 == 0)then
+            textColor = { 1, 1, 1, 0}
         else
             textColor = pingWheelTextHighlightColor
         end
@@ -271,6 +327,6 @@ function widget:DrawScreen()
             end
         end
         glLineWidth(1)
-        glPopMatrix()
     end
+    glPopMatrix()
 end
