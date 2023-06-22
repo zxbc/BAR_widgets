@@ -31,7 +31,7 @@ local inner_ring_alpha = 0.20 -- this is the inner rings that overlap from each 
 -- note that units with multiple weapons also rely on this to display their short ranges
 -- if you want to reduce clutter with large unit count, turn up group_selection_fade_scale
 local fill_alpha = 0.10 -- this is the solid color in the middle of the stencil
-local outer_fade_height_difference = 5500
+local outer_fade_height_difference = 3500
 ---------------------------------------------------------------------------------------------------------------------------
 local show_selected_weapon_ranges = true
 local innerRingDim = 1 -- don't change this
@@ -182,6 +182,9 @@ local function dumpToFile(obj, prefix, filename)
 end
 
 local function convertToBitmap(statusTable)
+	if type(statusTable) ~= "table" then
+		return 0
+	end
 	local bitmap = 0
 	for i, status in ipairs(statusTable) do
 		if status then
@@ -656,7 +659,7 @@ local vsSrc = [[
 		// FadeStart, FadeEnd, StartAlpha, EndAlpha
 		float fadeDist = visibility.y - visibility.x;
 		if (ISDGUN > 0.5) {
-			FADEALPHA  = clamp((visibility.y + fadeDistOffset + 4000 - distToCam)/(fadeDist),visibility.w,visibility.z);
+			FADEALPHA  = clamp((visibility.y + fadeDistOffset + 3000 - distToCam)/(fadeDist),visibility.w,visibility.z);
 		} else {
 			FADEALPHA  = clamp((visibility.y + fadeDistOffset - distToCam)/(fadeDist),visibility.w,visibility.z);
 		}
@@ -879,7 +882,16 @@ local function AddSelectedUnit(unitID, mouseover)
 		-- we add checks here for the display toggle status from config
 		if unitToggles[unitName] then -- only if there's a config, else default is to draw it
 			local wToggleStatuses = unitToggles[unitName][allystring]
-			drawIt = wToggleStatuses[j] and drawIt
+			if type(wToggleStatuses) == 'table' then
+				drawIt = wToggleStatuses[j] and drawIt
+			else
+				-- fixing the unitToggles table since something was corrupted
+				local entry = {}
+				for i=1, #weapons do
+					entry[i] = true
+				end
+				unitToggles[unitName][allystring] = entry
+			end
 		end
 
 		local ringParams = unitDefRings[unitDef.id]['rings'][j]
