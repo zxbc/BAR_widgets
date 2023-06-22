@@ -30,7 +30,7 @@ local pingWheel = { -- the options in the ping wheel, displayed clockwise from 1
     {name = "DEFEND"},
     {name = "HELP"},
     {name = "RETREAT"},
-    {name = "OMGSTOPECO"},
+    {name = "STOP"},
     {name = "OMW"},
 }
 
