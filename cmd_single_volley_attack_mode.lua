@@ -161,7 +161,7 @@ function widget:Update(dt)
                 if #commands > 0 then
                     local cmdID = commands[1].id
                     local params = commands[1].params
-                    if (cmdID == CMD_ATTACK) and (params[#params] == 666666) then
+                    if ((cmdID == CMD_ATTACK) and (params[#params] == 666666)) or (overWatchedCmdCount[unitID] > 1000) then
                         --spEcho("detected single volley attack command from unit "..tostring(unitID))
                         overWatchedCmdCount[unitID] = overWatchedCmdCount[unitID] - 1
                         spGiveOrderToUnit(unitID, CMD_REMOVE, {commands[1].tag, 555555}, 0)
