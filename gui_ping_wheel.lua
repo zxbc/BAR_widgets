@@ -1,11 +1,11 @@
 function widget:GetInfo()
     return {
         name    = "Ping Wheel",
-        desc    = "Displays a ping wheel when a keybind is held down. Default keybind is 'alt-f', rebindable.",
+        desc    = "Displays a ping wheel when a keybind is held down. Default keybind is 'alt-f', rebindable. Left click to bring up commands wheel, right click for messages wheel.",
         author  = "Errrrrrr",
         date    = "June 21, 2023",
         license = "GNU GPL, v2 or later",
-        version = "2.1",
+        version = "2.2",
         layer   = 999999,
         enabled = true,
     }
@@ -16,22 +16,33 @@ end
 -- The wheel is opened by holding the keybind (default: alt-f), left click to select an option.
 --
 -- Set custom_keybind_mode to true for custom keybind.
--- Bindable action name: ping_wheel_on, ping_wheel_off (best bound to same key!)
+-- Bindable action name: ping_wheel_on
 --
--- You can add or change the options in the pingWheel table.
+-- You can add or change the options in the pingWheel tables.
+-- the two tables pingCommands and pingMessages are left and right click options respectively.
 -----------------------------------------------------------------------------------------------
-local custom_keybind_mode = true  -- set to true for custom keybind
+local custom_keybind_mode = false  -- set to true for custom keybind
 
 local player_color_mode = true  -- set to false to use pingWheelColor instead of player color
+local draw_dividers = true   -- set to false to disable the dividers between options
+local draw_circle = false      -- set to false to disable the circle around the ping wheel
 
-local pingWheel = { -- the options in the ping wheel, displayed clockwise from 12 o'clock
-    {name = "ATTACK"},
-    {name = "RALLY"},
-    {name = "DEFEND"},
-    {name = "HELP"},
-    {name = "RETREAT"},
-    {name = "STOP"},
-    {name = "OMW"},
+local pingCommands = { -- the options in the ping wheel, displayed clockwise from 12 o'clock
+    {name = "Attack"},
+    {name = "Rally"},
+    {name = "Defend"},
+    {name = "Help"},
+    {name = "Retreat"},
+    {name = "Stop"},
+}
+
+local pingMessages = {
+    {name = "Thank you!"},
+    {name = "Well played!"},
+    {name = "Nice one!"},
+    {name = "Sorry!"},
+    {name = "LOL!"},
+    {name = "On my way"},
 }
 
 local spamControlFrames = 60   -- how many frames to wait before allowing another ping
@@ -42,13 +53,15 @@ local centerDotSize = 20        -- size of the center dot
 local deadZoneRadiusRatio = 0.6 -- the center "no selection" area as a ratio of the ping wheel radius
 
 local pingWheelColor = {0.9, 0.8, 0.5, 0.6}
-local pingWheelTextColor = {1, 1, 1, 0.6}
+local pingWheelTextColor = {1, 1, 1, 0.7}
 local pingWheelTextSize = 25
 local pingWheelTextHighlightColor = {1, 1, 1, 1}
 local pingWheelTextSpamColor = {0.9, 0.9, 0.9, 0.4}
-local pingWheelFanColor = {0.9, 0.8, 0.5, 0.8}
 local pingWheelPlayerColor = {0.9, 0.8, 0.5, 0.8}
 
+---------------------------------------------------------------
+-- End of params
+local pingWheel = pingCommands
 local keyDown = false
 local displayPingWheel = false
 
@@ -153,6 +166,11 @@ end
 
 function widget:MousePress(mx, my, button)
     if keyDown then
+        if button == 1 then
+            pingWheel = pingCommands
+        elseif button == 3 then
+            pingWheel = pingMessages
+        end
         TurnOn("mouse press")
         return true -- block all other mouse presses
     else
@@ -207,7 +225,7 @@ function widget:Update(dt)
             angleDeg = angleDeg + 360
         end
         local selection = (floor((360-angleDeg) / 360 * #pingWheel)+2) % #pingWheel + 1
-        -- if the mouse is within 0.75 of the radius, then set pingWheelSelection to nothing
+        -- deadzone is no selection
         local dist = sqrt(dx*dx + dy*dy)
         if dist < deadZoneRadiusRatio * pingWheelRadius then
             pingWheelSelection = 0
@@ -241,6 +259,10 @@ local glPopMatrix = gl.PopMatrix
 local glBlending = gl.Blending
 local glDepthTest = gl.DepthTest
 local glBeginEnd = gl.BeginEnd
+local glBeginText = gl.BeginText
+local glEndText = gl.EndText
+local glTexture = gl.Texture
+local glTexRect = gl.TexRect
 local glText = gl.Text
 local glVertex = gl.Vertex
 local glPointSize = gl.PointSize
@@ -250,28 +272,41 @@ local GL_POINTS = GL.POINTS
 local GL_SRC_ALPHA = GL.SRC_ALPHA
 local GL_ONE_MINUS_SRC_ALPHA = GL.ONE_MINUS_SRC_ALPHA
 
-local blackCircleTexture = "LuaUI/assets/blackcircle.png"
-local fontExo2Bold = "LuaUI/Fonts/Exo2-SemiBold.otf"
+local glowTexture = "LuaUI/images/glow.dds"
+local fontExo2Bold = "fonts/Exo2-SemiBold.otf"
 
 function widget:DrawScreen()
-    glPushMatrix()
 
     -- if keyDown then draw a dot at where mouse is
+    glPushMatrix()
     if keyDown and not displayPingWheel then
         -- draw dot at mouse location
         local mx, my = spGetMouseState()
         glColor(pingWheelColor)
         glPointSize(centerDotSize)
         glBeginEnd(GL_POINTS, glVertex, mx, my)
-        -- also draw a billboard label next to the mouse saying "Ping Wheel"
+        -- draw two hints at the top left and right of the location
         glColor(1, 1, 1, 1)
-        glText("Ping Wheel", mx + 10, my + 10, 12, "O")
+        glText("MESSAGES", mx + 10, my + 10, 11, "os")
+        glText("COMMANDS", mx - 10, my + 10, 11, "ros")
+
 
     end
     -- we draw a wheel at the pingWheelScreenLocation divided into #pingWheel slices, with the first slice starting at the top
     if displayPingWheel and pingWheelScreenLocation then
+
+        -- add the blackCircleTexture as background texture
+        glBlending(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA)
+        glColor(0,0,0,0.8)    -- inverting color for the glow texture :)
+        glTexture(glowTexture)
+        -- use pingWheelRadius as the size of the background texture
+        local halfSize = pingWheelRadius * 1.8
+        glTexRect(pingWheelScreenLocation.x - halfSize, pingWheelScreenLocation.y - halfSize, pingWheelScreenLocation.x + halfSize, pingWheelScreenLocation.y + halfSize)
+        glTexture(false)
+
         -- draw a smooth circle at the pingWheelScreenLocation with 128 vertices
-        glColor(pingWheelColor)
+        --glColor(pingWheelColor)
+        glColor(1, 1, 1, 0.25)
         glLineWidth(pingWheelThickness)
 
         local function Circle(r)
@@ -281,11 +316,10 @@ function widget:DrawScreen()
             end
         end
 
-        glBeginEnd(GL_LINE_LOOP, Circle, pingWheelRadius * deadZoneRadiusRatio)
-        --glLineWidth(0.5)
-        --glBeginEnd(GL_LINE_LOOP, Circle, pingWheelRadius)
-        --glLineWidth(pingWheelThickness)
-        --glBeginEnd(GL_LINE_LOOP, Circle, pingWheelRadius * 1.3)
+        -- draw the dead zone circle
+        if draw_circle then
+            glBeginEnd(GL_LINE_LOOP, Circle, pingWheelRadius * deadZoneRadiusRatio)
+        end
 
         -- draw the center dot
         glColor(pingWheelColor)
@@ -319,22 +353,43 @@ function widget:DrawScreen()
         end
         local angle = (pingWheelSelection -1) * 2 * pi / #pingWheel
     
+        -- draw the text using the fontExo2Bold font
+
         glColor(textColor)
         if pingWheelSelection ~= 0 then
-            glText(pingWheel[pingWheelSelection].name, pingWheelScreenLocation.x + pingWheelRadius * sin(angle), pingWheelScreenLocation.y + pingWheelRadius * cos(angle), pingWheelTextSize * 1.6, "cvos")
+            glText(pingWheel[pingWheelSelection].name, pingWheelScreenLocation.x + pingWheelRadius * sin(angle), pingWheelScreenLocation.y + pingWheelRadius * cos(angle), pingWheelTextSize * 1.8, "cvos")
         end
 
         glColor(pingWheelTextColor)
         if spamControl > 0 then
             glColor(pingWheelTextSpamColor)
         end
+        glBeginText()
         for i = 1, #pingWheel do
             if i ~= pingWheelSelection or pingWheelSelection == 0 then
                 angle = (i - 1) * 2 * math.pi / #pingWheel
                 glText(pingWheel[i].name, pingWheelScreenLocation.x + pingWheelRadius * math.sin(angle), pingWheelScreenLocation.y + pingWheelRadius * math.cos(angle), pingWheelTextSize, "cvos")
             end
         end
+        glEndText()
+
+        -- draw divider lines between slices
+        if draw_dividers then
+            local function Line2(angle)
+                glVertex(pingWheelScreenLocation.x + pingWheelRadius * 0.4 * sin(angle), pingWheelScreenLocation.y + pingWheelRadius * 0.4 * cos(angle))
+                glVertex(pingWheelScreenLocation.x + pingWheelRadius * 1 * sin(angle), pingWheelScreenLocation.y + pingWheelRadius * 1 * cos(angle))
+            end
+
+            glColor(1,1,1,0.15)
+            glLineWidth(pingWheelThickness * 1)
+            for i = 1, #pingWheel do
+                local angle2 = (i - 1.5) * 2 * math.pi / #pingWheel
+                glBeginEnd(GL_LINES, Line2, angle2)
+            end
+        end
         glLineWidth(1)
+        glBlending(false)
+        
     end
     glPopMatrix()
 end
