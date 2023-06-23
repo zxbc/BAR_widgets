@@ -37,8 +37,9 @@ local pingWheel = { -- the options in the ping wheel, displayed clockwise from 1
 local spamControlFrames = 60   -- how many frames to wait before allowing another ping
 local viewSizeX, viewSizeY = Spring.GetViewGeometry()
 local pingWheelRadius = 0.1 * math.min(viewSizeX, viewSizeY)    -- 10% of the screen size
-local pingWheelThickness = 5    -- thickness of the ping wheel line drawing
+local pingWheelThickness = 2    -- thickness of the ping wheel line drawing
 local centerDotSize = 20        -- size of the center dot
+local deadZoneRadiusRatio = 0.6 -- the center "no selection" area as a ratio of the ping wheel radius
 
 local pingWheelColor = {0.9, 0.8, 0.5, 0.6}
 local pingWheelTextColor = {1, 1, 1, 0.6}
@@ -146,7 +147,7 @@ end
 function widget:KeyRelease(key, mods)
     -- making sure weird lingering display doesn't happen with custom keybind!
     keyDown = false
-    TurnOff("key release")
+    --TurnOff("key release")
     --Spring.Echo("keyDown: " .. tostring(keyDown))
 end
 
@@ -208,7 +209,7 @@ function widget:Update(dt)
         local selection = (floor((360-angleDeg) / 360 * #pingWheel)+2) % #pingWheel + 1
         -- if the mouse is within 0.75 of the radius, then set pingWheelSelection to nothing
         local dist = sqrt(dx*dx + dy*dy)
-        if dist < 0.75 * pingWheelRadius then
+        if dist < deadZoneRadiusRatio * pingWheelRadius then
             pingWheelSelection = 0
         elseif selection ~= pingWheelSelection then
             pingWheelSelection = selection
@@ -249,6 +250,8 @@ local GL_POINTS = GL.POINTS
 local GL_SRC_ALPHA = GL.SRC_ALPHA
 local GL_ONE_MINUS_SRC_ALPHA = GL.ONE_MINUS_SRC_ALPHA
 
+local blackCircleTexture = "LuaUI/assets/blackcircle.png"
+
 function widget:DrawScreen()
     glPushMatrix()
 
@@ -277,11 +280,11 @@ function widget:DrawScreen()
             end
         end
 
-        glBeginEnd(GL_LINE_LOOP, Circle, pingWheelRadius * 0.75)
-        glLineWidth(0.5)
-        glBeginEnd(GL_LINE_LOOP, Circle, pingWheelRadius)
-        glLineWidth(pingWheelThickness)
-        glBeginEnd(GL_LINE_LOOP, Circle, pingWheelRadius * 1.3)
+        glBeginEnd(GL_LINE_LOOP, Circle, pingWheelRadius * deadZoneRadiusRatio)
+        --glLineWidth(0.5)
+        --glBeginEnd(GL_LINE_LOOP, Circle, pingWheelRadius)
+        --glLineWidth(pingWheelThickness)
+        --glBeginEnd(GL_LINE_LOOP, Circle, pingWheelRadius * 1.3)
 
         -- draw the center dot
         glColor(pingWheelColor)
@@ -292,18 +295,18 @@ function widget:DrawScreen()
         -- first angle should be half a selection ahead of the current selection
         -- second angle should be half a selection behind of the current selection
         -- only draw if pingWheelSelection is not 0
-        if pingWheelSelection ~= 0 then
+--[[         if pingWheelSelection ~= 0 then
             local angle1 = (pingWheelSelection -0.5) * 2 * pi / #pingWheel
             local angle2 = (pingWheelSelection -1.5) * 2 * pi / #pingWheel
             glColor(pingWheelFanColor)
             glLineWidth(pingWheelThickness * 0.3)
             local function Line(angle)
                 glVertex(pingWheelScreenLocation.x, pingWheelScreenLocation.y)
-                glVertex(pingWheelScreenLocation.x + pingWheelRadius * 1.3 * sin(angle), pingWheelScreenLocation.y + pingWheelRadius * 1.3 * cos(angle))
+                glVertex(pingWheelScreenLocation.x + pingWheelRadius * 1 * sin(angle), pingWheelScreenLocation.y + pingWheelRadius * 1 * cos(angle))
             end
             glBeginEnd(GL_LINES, Line, angle2)
             glBeginEnd(GL_LINES, Line, angle1)
-        end
+        end ]]
 
         -- draw the text for each slice and highlight the selected one
         -- also flash the text color to indicate ping was issued
@@ -316,7 +319,7 @@ function widget:DrawScreen()
         local angle = (pingWheelSelection -1) * 2 * pi / #pingWheel
         glColor(textColor)
         if pingWheelSelection ~= 0 then
-            glText(pingWheel[pingWheelSelection].name, pingWheelScreenLocation.x + pingWheelRadius * sin(angle), pingWheelScreenLocation.y + pingWheelRadius * cos(angle), pingWheelTextSize, "co")
+            glText(pingWheel[pingWheelSelection].name, pingWheelScreenLocation.x + pingWheelRadius * sin(angle), pingWheelScreenLocation.y + pingWheelRadius * cos(angle), pingWheelTextSize * 1.5, "cvo")
         end
 
         glColor(pingWheelTextColor)
@@ -326,7 +329,7 @@ function widget:DrawScreen()
         for i = 1, #pingWheel do
             if i ~= pingWheelSelection or pingWheelSelection == 0 then
                 angle = (i - 1) * 2 * math.pi / #pingWheel
-                glText(pingWheel[i].name, pingWheelScreenLocation.x + pingWheelRadius * math.sin(angle), pingWheelScreenLocation.y + pingWheelRadius * math.cos(angle), pingWheelTextSize, "co")
+                glText(pingWheel[i].name, pingWheelScreenLocation.x + pingWheelRadius * math.sin(angle), pingWheelScreenLocation.y + pingWheelRadius * math.cos(angle), pingWheelTextSize, "cvo")
             end
         end
         glLineWidth(1)
