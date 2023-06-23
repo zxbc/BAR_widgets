@@ -20,7 +20,7 @@ end
 --
 -- You can add or change the options in the pingWheel table.
 -----------------------------------------------------------------------------------------------
-local custom_keybind_mode = false  -- set to true for custom keybind
+local custom_keybind_mode = true  -- set to true for custom keybind
 
 local player_color_mode = true  -- set to false to use pingWheelColor instead of player color
 
@@ -67,10 +67,14 @@ local floor = math.floor
 local pi = math.pi
 local sin = math.sin
 local cos = math.cos
+local sqrt = math.sqrt
+
+local soundDefaultSelect = "sounds/commands/cmd-default-select.wav"
+local soundSetTarget = "sounds/commands/cmd-settarget.wav"
 
 function widget:Initialize()
     -- add the action handler with argument for press and release using the same function call
-    widgetHandler:AddAction("ping_wheel_on", PingWheelAction, {true}, "p")
+    widgetHandler:AddAction("ping_wheel_on", PingWheelAction, {true}, "pR")
     widgetHandler:AddAction("ping_wheel_on", PingWheelAction, {false}, "r")
     pingWheelPlayerColor = {Spring.GetTeamColor(Spring.GetMyTeamID())}
     if player_color_mode then
@@ -88,7 +92,7 @@ local function SetPingLocation()
         pingWheelScreenLocation = { x = mx, y = my }
 
         -- play a UI sound to indicate wheel is open
-        Spring.PlaySoundFile("sounds/ui/beep4.wav", 0.1, 'ui')
+        Spring.PlaySoundFile(soundSetTarget, 0.1, 'ui')
     end
 end
 
@@ -133,7 +137,7 @@ end
 
 function widget:KeyPress(key, mods, isRepeat)
     if not custom_keybind_mode then
-        if key == 102 and mods.alt and not isRepeat then -- alt + f
+        if key == 102 and mods.alt and isRepeat then -- alt + f
             keyDown = true
         end
     end
@@ -142,11 +146,12 @@ end
 function widget:KeyRelease(key, mods)
     -- making sure weird lingering display doesn't happen with custom keybind!
     keyDown = false
+    TurnOff("key release")
     --Spring.Echo("keyDown: " .. tostring(keyDown))
 end
 
 function widget:MousePress(mx, my, button)
-    if button == 1 and keyDown then
+    if keyDown then
         TurnOn("mouse press")
         return true -- block all other mouse presses
     else
@@ -158,8 +163,7 @@ end
 
 -- when mouse is pressed, issue the ping command
 function widget:MouseRelease(mx, my, button)
-    if button == 1
-        and displayPingWheel
+    if displayPingWheel
         and pingWorldLocation 
         and spamControl == 0 
     then
@@ -202,14 +206,13 @@ function widget:Update(dt)
             angleDeg = angleDeg + 360
         end
         local selection = (floor((360-angleDeg) / 360 * #pingWheel)+2) % #pingWheel + 1
-        if selection ~= pingWheelSelection then
-            pingWheelSelection = selection
-        end
-
         -- if the mouse is within 0.75 of the radius, then set pingWheelSelection to nothing
-        local dist = math.sqrt(dx*dx + dy*dy)
+        local dist = sqrt(dx*dx + dy*dy)
         if dist < 0.75 * pingWheelRadius then
             pingWheelSelection = 0
+        elseif selection ~= pingWheelSelection then
+            pingWheelSelection = selection
+            Spring.PlaySoundFile(soundDefaultSelect, 0.3, 'ui')
         end
 
 
