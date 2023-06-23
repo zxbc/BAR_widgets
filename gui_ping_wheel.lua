@@ -151,7 +151,7 @@ end
 
 function widget:KeyPress(key, mods, isRepeat)
     if not custom_keybind_mode then
-        if key == 102 and mods.alt and isRepeat then -- alt + f
+        if key == 102 and mods.alt then -- alt + f
             keyDown = true
         end
     end
@@ -301,7 +301,7 @@ function widget:DrawScreen()
         glColor(0,0,0,0.8)    -- inverting color for the glow texture :)
         glTexture(glowTexture)
         -- use pingWheelRadius as the size of the background texture
-        local halfSize = pingWheelRadius * 1.8
+        local halfSize = pingWheelRadius * 1.9
         glTexRect(pingWheelScreenLocation.x - halfSize, pingWheelScreenLocation.y - halfSize, pingWheelScreenLocation.x + halfSize, pingWheelScreenLocation.y + halfSize)
         glTexture(false)
 
