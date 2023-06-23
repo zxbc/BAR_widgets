@@ -42,7 +42,7 @@ local pingMessages = {
     {name = "Nice one!"},
     {name = "Sorry!"},
     {name = "LOL!"},
-    {name = "On my way"},
+    {name = "On my way!"},
 }
 
 local spamControlFrames = 60   -- how many frames to wait before allowing another ping
@@ -219,12 +219,13 @@ function widget:Update(dt)
         -- calculate where the mouse is relative to the pingWheelScreenLocation, remember top is the first selection
         local dx = mx - pingWheelScreenLocation.x
         local dy = my - pingWheelScreenLocation.y
-        local angle = math.atan2(dy, dx)
+        local angle = math.atan2(dx, dy)
         local angleDeg = floor(angle * 180 / pi + 0.5)
         if angleDeg < 0 then
             angleDeg = angleDeg + 360
         end
-        local selection = (floor((360-angleDeg) / 360 * #pingWheel)+2) % #pingWheel + 1
+        local offset = 360 / #pingWheel / 2
+        local selection = (floor((360 + angleDeg + offset) / 360 * #pingWheel)) % #pingWheel + 1
         -- deadzone is no selection
         local dist = sqrt(dx*dx + dy*dy)
         if dist < deadZoneRadiusRatio * pingWheelRadius then
@@ -287,8 +288,8 @@ function widget:DrawScreen()
         glBeginEnd(GL_POINTS, glVertex, mx, my)
         -- draw two hints at the top left and right of the location
         glColor(1, 1, 1, 1)
-        glText("MESSAGES", mx + 10, my + 10, 11, "os")
-        glText("COMMANDS", mx - 10, my + 10, 11, "ros")
+        glText("R-click\nMsgs", mx + 15, my + 11, 12, "os")
+        glText("L-click\nCmds", mx - 15, my + 11, 12, "ros")
 
 
     end
