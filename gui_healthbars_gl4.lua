@@ -5,7 +5,7 @@ function widget:GetInfo()
       author    = "Beherith, modified by Errrrrrr",
       date      = "May 2023",
       license   = "GNU GPL, v2 or later for Lua code, (c) Beherith (mysterme@gmail.com) for GLSL",
-      layer     = 999999,
+      layer     = -10,
       enabled   = true
    }
 end
@@ -1258,7 +1258,7 @@ function widget:DrawWorld()
 	end
 	if healthBarVBO.usedElements > 0 or featureHealthVBO.usedElements > 0 then -- which quite strictly, is impossible anyway
 		local disticon = Spring.GetConfigInt("UnitIconDistance", 200) * 27.5 -- iconLength = unitIconDist * unitIconDist * 750.0f;
-		gl.DepthTest(true)
+		gl.DepthTest(false)
 		gl.DepthMask(true)
 		gl.Texture(0,healthbartexture)
 		healthBarShader:Activate()
@@ -1305,7 +1305,7 @@ function widget:DrawWorld()
 		end
 
 		gl.Texture(false)
-		gl.DepthTest(false)
+		--gl.DepthTest(false)
     gl.DepthMask(false) --"BK OpenGL state resets", reset to default state
 	end
 end
