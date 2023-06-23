@@ -23,7 +23,7 @@ end
 -- Icon drawing is disabled now, if you want to use the old toggle mode, set drawIcons to true
 ---------------------------------------------------------------------------------------------
 local custom_keybind_mode = false
-local drawIcons = false
+local drawIcons = true
 
 local degen_mode = false   -- deprecated, no need
 
@@ -123,11 +123,11 @@ function SingleVolleyAttackToggle(_,_,_,args)
         if not overWatched[unitID] then
             overWatched[unitID] = reloadFrame
             overWatchedCmdCount[unitID] = 999999
-            --Spring.Echo("Unit "..tostring(unitID).." (" .. unitDef.name .. ") added to single volley overwatch")
+            Spring.Echo("Unit "..tostring(unitID).." (" .. unitDef.name .. ") added to single volley overwatch")
         else
             overWatched[unitID] = nil
             overWatchedCmdCount[unitID] = 0
-            --Spring.Echo("Unit "..tostring(unitID).." (" .. unitDef.name .. ") removed from single volley overwatch")
+            Spring.Echo("Unit "..tostring(unitID).." (" .. unitDef.name .. ") removed from single volley overwatch")
         end
     end
 end
@@ -181,8 +181,12 @@ function widget:Update(dt)
         end
     end
     if gameFrame % 2 == 1 then
-        if singleVolleyAttackActive and not spGetActiveCommand()then
-            singleVolleyAttackActive = false
+        if singleVolleyAttackActive then
+            local index, cmd_id, cmd_type, cmd_name = spGetActiveCommand()
+            --spEcho("cmd_id: "..tostring(cmd_id))
+            if not cmd_id then
+                singleVolleyAttackActive = false
+            end
         end
     end
 end
@@ -254,7 +258,7 @@ function widget:UnitCommand(unitID, unitDefID, unitTeam, cmdID, cmdParams, cmdOp
             end
         end
         if cmdIndex > 0 then
-            local cmdID = commands[cmdIndex].id
+            cmdID = commands[cmdIndex].id
             local params = commands[cmdIndex].params
             if (cmdID == CMD_ATTACK) and (params[#params] == 666666) then
                 --spEcho("detected single volley attack command from unit "..tostring(unitID))
