@@ -5,7 +5,7 @@ function widget:GetInfo()
         author  = "Errrrrrr",
         date    = "June 21, 2023",
         license = "GNU GPL, v2 or later",
-        version = "2.0",
+        version = "2.1",
         layer   = 999999,
         enabled = true,
     }
@@ -251,6 +251,7 @@ local GL_SRC_ALPHA = GL.SRC_ALPHA
 local GL_ONE_MINUS_SRC_ALPHA = GL.ONE_MINUS_SRC_ALPHA
 
 local blackCircleTexture = "LuaUI/assets/blackcircle.png"
+local fontExo2Bold = "LuaUI/Fonts/Exo2-SemiBold.otf"
 
 function widget:DrawScreen()
     glPushMatrix()
@@ -317,9 +318,10 @@ function widget:DrawScreen()
             textColor = pingWheelTextHighlightColor
         end
         local angle = (pingWheelSelection -1) * 2 * pi / #pingWheel
+    
         glColor(textColor)
         if pingWheelSelection ~= 0 then
-            glText(pingWheel[pingWheelSelection].name, pingWheelScreenLocation.x + pingWheelRadius * sin(angle), pingWheelScreenLocation.y + pingWheelRadius * cos(angle), pingWheelTextSize * 1.5, "cvo")
+            glText(pingWheel[pingWheelSelection].name, pingWheelScreenLocation.x + pingWheelRadius * sin(angle), pingWheelScreenLocation.y + pingWheelRadius * cos(angle), pingWheelTextSize * 1.6, "cvos")
         end
 
         glColor(pingWheelTextColor)
@@ -329,7 +331,7 @@ function widget:DrawScreen()
         for i = 1, #pingWheel do
             if i ~= pingWheelSelection or pingWheelSelection == 0 then
                 angle = (i - 1) * 2 * math.pi / #pingWheel
-                glText(pingWheel[i].name, pingWheelScreenLocation.x + pingWheelRadius * math.sin(angle), pingWheelScreenLocation.y + pingWheelRadius * math.cos(angle), pingWheelTextSize, "cvo")
+                glText(pingWheel[i].name, pingWheelScreenLocation.x + pingWheelRadius * math.sin(angle), pingWheelScreenLocation.y + pingWheelRadius * math.cos(angle), pingWheelTextSize, "cvos")
             end
         end
         glLineWidth(1)
