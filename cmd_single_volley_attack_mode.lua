@@ -23,7 +23,7 @@ end
 -- Icon drawing is disabled now, if you want to use the old toggle mode, set drawIcons to true
 ---------------------------------------------------------------------------------------------
 local custom_keybind_mode = false
-local drawIcons = true
+local drawIcons = false
 
 local degen_mode = false   -- deprecated, no need
 
