@@ -122,9 +122,11 @@ function SingleVolleyAttackToggle(_,_,_,args)
         local unitDef = UnitDefs[spGetUnitDefID(unitID)]
         if not overWatched[unitID] then
             overWatched[unitID] = reloadFrame
+            overWatchedCmdCount[unitID] = 999999
             --Spring.Echo("Unit "..tostring(unitID).." (" .. unitDef.name .. ") added to single volley overwatch")
         else
             overWatched[unitID] = nil
+            overWatchedCmdCount[unitID] = 0
             --Spring.Echo("Unit "..tostring(unitID).." (" .. unitDef.name .. ") removed from single volley overwatch")
         end
     end
