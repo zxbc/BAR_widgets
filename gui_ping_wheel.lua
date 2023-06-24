@@ -8,6 +8,7 @@ function widget:GetInfo()
         version = "2.3",
         layer   = 999,
         enabled = true,
+        handler = true
     }
 end
 
@@ -139,6 +140,7 @@ local flashing = false
 
 -- Speedups
 local spGetMouseState = Spring.GetMouseState
+local spGetModKeyState = Spring.GetModKeyState
 local spTraceScreenRay = Spring.TraceScreenRay
 local atan2 = math.atan2
 local floor = math.floor
@@ -152,8 +154,8 @@ local soundSetTarget = "sounds/commands/cmd-settarget.wav"
 
 function widget:Initialize()
     -- add the action handler with argument for press and release using the same function call
-    widgetHandler:AddAction("ping_wheel_on", PingWheelAction, {true}, "pR")
-    widgetHandler:AddAction("ping_wheel_on", PingWheelAction, {false}, "r")
+    widgetHandler.actionHandler:AddAction(self,"ping_wheel_on", PingWheelAction, {true}, "pR")
+    widgetHandler.actionHandler:AddAction(self,"ping_wheel_on", PingWheelAction, {false}, "r")
     pingWheelPlayerColor = {Spring.GetTeamColor(Spring.GetMyTeamID())}
     if player_color_mode then
         pingWheelColor = pingWheelPlayerColor
@@ -169,6 +171,13 @@ function widget:Initialize()
     textAlignRadiusRatio = style.textAlignRadiusRatio
     dividerColor = style.dividerColor
 
+    -- we disable the mouse build spacing widget here, sigh
+    widgetHandler:DisableWidget("Mouse Buildspacing")
+end
+
+-- when widget exits, re-enable the mouse build spacing widget
+function widget:Shutdown()
+    widgetHandler:EnableWidget("Mouse Buildspacing")
 end
 
 -- Store the ping location in pingWorldLocation
@@ -253,10 +262,23 @@ function widget:KeyRelease(key, mods)
 end
 
 function widget:MousePress(mx, my, button)
-    if keyDown then
-        if button == 1 then
+    if keyDown or button == 4 or button == 5 then
+
+        -- functionality of mouse build spacing is put in here, sigh
+        -- check if alt is pressed
+        local alt, ctrl, meta, shift = spGetModKeyState()
+        if (button == 4 or button == 5) and alt then
+            if button == 4 then
+                Spring.SendCommands("buildspacing inc")
+            elseif button == 5 then
+                Spring.SendCommands("buildspacing dec")
+            end
+            return
+        end
+
+        if button == 1 or button == 4 then
             pingWheel = pingCommands
-        elseif button == 3 then
+        elseif button == 3 or button == 5 then
             pingWheel = pingMessages
         end
         TurnOn("mouse press")
@@ -284,7 +306,7 @@ function widget:MouseRelease(mx, my, button)
             spamControl = spamControlFrames
 
             -- play a UI sound to indicate ping was issued
-            Spring.PlaySoundFile("sounds/ui/mappoint2.wav", 1, 'ui')
+            --Spring.PlaySoundFile("sounds/ui/mappoint2.wav", 1, 'ui')
             FlashAndOff()
         else
             --TurnOff("Selection 0")
