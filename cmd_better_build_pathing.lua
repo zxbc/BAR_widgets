@@ -6,7 +6,7 @@ function widget:GetInfo()
         date    = "June, 2023",
         version = "1.0",
         license = "GNU GPL, v2 or later",
-        layer   = 1,
+        layer   = 10,
         enabled = true,
     }
 end
@@ -86,8 +86,8 @@ local function GetUnitFinalPosition(uID)
 						local pID = params[1]
 						local px, py, pz
 
-						if pID > maxUnits then
-							px, py, pz = spGetFeaturePosition(pID - maxUnits)
+						if pID > 32000 then
+							px, py, pz = spGetFeaturePosition(pID - 32000)
 						else
 							px, py, pz = spGetUnitPosition(pID)
 						end
