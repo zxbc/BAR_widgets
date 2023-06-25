@@ -6,7 +6,7 @@ function widget:GetInfo()
         date    = "June 22, 2023",
         license = "GNU GPL, v2 or later",
         version = "1.2",
-        layer   = 9999,
+        layer   = -10,
         enabled = true,
         handler = true
     }
@@ -133,6 +133,12 @@ function SingleVolleyAttackToggle(_,_,_,args)
 end
 
 function SingleVolleyAttackCommand(_,_,_,args)
+    -- if somehow build options are avaiable, this is a builder and we don't want to do anything
+    if Spring.GetSelectedUnitsCount() == 1 then
+        local unitID = Spring.GetSelectedUnits()[1]
+        local unitDef = UnitDefs[spGetUnitDefID(unitID)]
+        if unitDef.buildOptions[1] then return end
+    end
     singleVolleyAttackActive = true
     spSetActiveCommand("attack", 1)
 end
