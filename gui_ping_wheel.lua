@@ -5,7 +5,7 @@ function widget:GetInfo()
         author  = "Errrrrrr",
         date    = "June 24, 2023",
         license = "GNU GPL, v2 or later",
-        version = "2.3",
+        version = "2.4",
         layer   = 999,
         enabled = true,
         handler = true
@@ -27,23 +27,25 @@ end
 local custom_keybind_mode = false  -- set to true for custom keybind
 
 local pingCommands = { -- the options in the ping wheel, displayed clockwise from 12 o'clock
-    {name = "Attack"},
-    {name = "Rally"},
-    {name = "Defend"},
-    {name = "Help"},
-    {name = "Retreat"},
-    {name = "Stop"},
+    {name = "Attack",   color = {1, 0.5, 0.3, 1}},
+    {name = "Rally",    color = {0.4, 0.8, 0.4, 1}},
+    {name = "Defend",   color = {0.7, 0.9, 1, 1}},
+    {name = "Retreat",  color = {0.9, 0.7, 1, 1}},
+    {name = "Alert",    color = {1, 1, 1, 1}},
+    {name = "Reclaim",  color = {0.7, 1, 0.7, 1}},
+    {name = "Stop",     color = {1, 0.2, 0.2, 1}},
+    {name = "Wait",     color = {0.7, 0.6, 0.3, 1}},
 }
 
 local pingMessages = {
     {name = "TY!"},
     {name = "GJ!"},
-    {name = "DANGER"},
+    {name = "DANGER!"},
     {name = "Sorry!"},
-    {name = "OMW!"},
     {name = "LOL"},
-    {name = "RIP"},
     {name = "No"},
+    {name = "OMW"},
+    {name = "For sale"},
 }
 
 local styleChoice = 1         -- 1 = circle, 2 = ring, 3 = custom
@@ -53,22 +55,22 @@ local styleConfig = {
     [1] = {
         name = "Circle",
         bgTexture = "LuaUI/images/glow.dds",
-        bgTextureSizeRatio = 1.9,
+        bgTextureSizeRatio = 2.2,
         bgTextureColor = {0, 0, 0, 0.9},
-        dividerInnerRatio = 0.4,
-        dividerOuterRatio = 1,
+        dividerInnerRatio = 0.45,
+        dividerOuterRatio = 1.1,
         dividerColor = {1, 1, 1, 0.15},
-        textAlignRadiusRatio = 0.9,
+        textAlignRadiusRatio = 1.1,
     },
     [2] = {
         name = "Ring",
         bgTexture = "LuaUI/images/enemyspotter.dds",
-        bgTextureSizeRatio = 1.6,
+        bgTextureSizeRatio = 1.9,
         bgTextureColor = {0, 0, 0, 0.66},
-        dividerInnerRatio = 0.4,
-        dividerOuterRatio = 1,
+        dividerInnerRatio = 0.6,
+        dividerOuterRatio = 1.2,
         dividerColor = {1, 1, 1, 0.15},
-        textAlignRadiusRatio = 0.9,
+        textAlignRadiusRatio = 1.1,
     },
     [3] = {
         name = "Custom",
@@ -91,9 +93,9 @@ local draw_circle = false      -- set to false to disable the circle around the 
 -- Fade and spam frames (set to 0 to disable)
 -- NOTE: these are now game frames, not display frames, so always 30 fps
 local numFadeInFrames = 5     -- how many frames to fade in
-local numFadeOutFrames = 3    -- how many frames to fade out
-local numFlashFrames = 3       -- how many frames to flash when spamming
-local spamControlFrames = 30   -- how many frames to wait before allowing another ping
+local numFadeOutFrames = 5    -- how many frames to fade out
+local numFlashFrames = 8       -- how many frames to flash when spamming
+local spamControlFrames = 8   -- how many frames to wait before allowing another ping
 
 local viewSizeX, viewSizeY = Spring.GetViewGeometry()
 
@@ -137,6 +139,7 @@ local spamControl = 0
 --local gameFrame = 0
 local flashFrame = 0
 local flashing = false
+local gameFrame = 0
 
 -- Speedups
 local spGetMouseState = Spring.GetMouseState
@@ -151,6 +154,19 @@ local sqrt = math.sqrt
 
 local soundDefaultSelect = "sounds/commands/cmd-default-select.wav"
 local soundSetTarget = "sounds/commands/cmd-settarget.wav"
+
+local function ColorName(color)
+    if color == nil then
+        return ""
+    end
+    local r = floor(color[1]*255)
+    local g = floor(color[2]*255)
+    local b = floor(color[3]*255)
+    local a = floor(color[4]*255)
+
+    local colorName = string.char(a) .. string.char(r) .. string.char(g) .. string.char(b)
+    return colorName
+end
 
 function widget:Initialize()
     -- add the action handler with argument for press and release using the same function call
@@ -243,6 +259,7 @@ end
 local function FlashAndOff()
     flashing = true
     flashFrame = numFlashFrames
+    --FadeOut()
     --Spring.Echo("Flashing off: " .. tostring(flashFrame))
 end
 
@@ -319,9 +336,15 @@ function widget:MouseRelease(mx, my, button)
 end
 
 function widget:GameFrame(gf)
-    --gameFrame = gf
+    gameFrame = gf
+end
+
+local sec, sec2 = 0, 0
+function widget:Update(dt)
+    sec = sec + dt
     -- we need smooth update of fade frames
-    if globalFadeIn > 0 or globalFadeOut > 0 then
+    if (sec > 0.017) and globalFadeIn > 0 or globalFadeOut > 0 then
+        sec = 0
         if globalFadeIn > 0 then
             globalFadeIn = globalFadeIn - 1
             if globalFadeIn < 0 then globalFadeIn = 0 end
@@ -338,8 +361,9 @@ function widget:GameFrame(gf)
 
     end
 
-    if (gf % 3 == 1) and displayPingWheel then
-
+    sec2 = sec2 + dt
+    if (sec2 > 0.03) and displayPingWheel then
+        sec2 = 0
         if globalFadeOut == 0 and not flashing then -- if not flashing and not fading out
             local mx, my = spGetMouseState()
             if not pingWheelScreenLocation then
@@ -361,9 +385,11 @@ function widget:GameFrame(gf)
             or (dist > outerLimitRadiusRatio * pingWheelRadius)
             then
                 pingWheelSelection = 0
+                --Spring.SetMouseCursor("cursornormal")
             elseif selection ~= pingWheelSelection then
                 pingWheelSelection = selection
                 Spring.PlaySoundFile(soundDefaultSelect, 0.3, 'ui')
+                --Spring.SetMouseCursor("cursorjump")
             end
 
             --Spring.Echo("pingWheelSelection: " .. pingWheel[pingWheelSelection].name)
@@ -371,17 +397,15 @@ function widget:GameFrame(gf)
         end
         if flashing and displayPingWheel then
             if flashFrame > 0 then
-                flashFrame = flashFrame - 3
+                flashFrame = flashFrame - 1
             else
                 flashing = false
-                --TurnOff("flashFrame update")
                 FadeOut()
             end
         end
-    end
-
-    if (gf % 10 == 1) and spamControl > 0 then
-        spamControl = (spamControl == 0) and 0 or (spamControl - 10)
+        if spamControl > 0 then
+        spamControl = (spamControl == 0) and 0 or (spamControl - 1)
+        end
     end
 end
 
@@ -504,27 +528,41 @@ function widget:DrawScreen()
         -- draw the text for each slice and highlight the selected one
         -- also flash the text color to indicate ping was issued
         local textColor = pingWheelTextColor
+        local flashBlack = false
         if flashing and (flashFrame % 2 == 0)then
             textColor = { 1, 1, 1, 0}
+            flashBlack = true
         else
             textColor = pingWheelTextHighlightColor
         end
         local angle = (pingWheelSelection -1) * 2 * pi / #pingWheel
 
-        glColor(textColor)
+        --glColor(textColor)
+        glBeginText()
         if pingWheelSelection ~= 0 then
-            glText(pingWheel[pingWheelSelection].name, pingWheelScreenLocation.x + pingWheelRadius * textAlignRadiusRatio * sin(angle), pingWheelScreenLocation.y + pingWheelRadius * textAlignRadiusRatio * cos(angle), pingWheelTextSize * 1.8, "cvos")
+            local text = pingWheel[pingWheelSelection].name
+            local color = pingWheel[pingWheelSelection].color or textColor
+            color[4] = 1
+            if flashBlack then
+                color = { 0, 0, 0, 0}
+            end
+            glColor(color)
+            glText(text, pingWheelScreenLocation.x + pingWheelRadius * textAlignRadiusRatio * sin(angle), pingWheelScreenLocation.y + pingWheelRadius * textAlignRadiusRatio * cos(angle), pingWheelTextSize * 2, "cvos")
         end
 
-        glColor(pingWheelTextColor)
+        --glColor(pingWheelTextColor)
         if spamControl > 0 then
             glColor(pingWheelTextSpamColor)
         end
-        glBeginText()
+        
         for i = 1, #pingWheel do
             if i ~= pingWheelSelection or pingWheelSelection == 0 then
                 angle = (i - 1) * 2 * math.pi / #pingWheel
-                glText(pingWheel[i].name, pingWheelScreenLocation.x + pingWheelRadius * textAlignRadiusRatio * math.sin(angle), pingWheelScreenLocation.y + pingWheelRadius * textAlignRadiusRatio * math.cos(angle), pingWheelTextSize, "cvos")
+                local text = pingWheel[i].name
+                local color = pingWheel[i].color or pingWheelTextColor
+                color[4] = 0.75
+                glColor(color)
+                glText(text, pingWheelScreenLocation.x + pingWheelRadius * textAlignRadiusRatio * math.sin(angle), pingWheelScreenLocation.y + pingWheelRadius * textAlignRadiusRatio * math.cos(angle), pingWheelTextSize, "cvos")
             end
         end
         glEndText()
