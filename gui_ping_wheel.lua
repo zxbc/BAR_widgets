@@ -27,7 +27,7 @@ end
 local custom_keybind_mode = false  -- set to true for custom keybind
 
 local pingCommands = { -- the options in the ping wheel, displayed clockwise from 12 o'clock
-    {name = "Attack",   color = {1, 0.5, 0.3, 1}},
+    {name = "Attack",   color = {1, 0.5, 0.3, 1}}, -- color is optional, if no color is chosen it will be white
     {name = "Rally",    color = {0.4, 0.8, 0.4, 1}},
     {name = "Defend",   color = {0.7, 0.9, 1, 1}},
     {name = "Retreat",  color = {0.9, 0.7, 1, 1}},
