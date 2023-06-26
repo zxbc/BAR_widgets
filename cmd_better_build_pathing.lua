@@ -291,7 +291,7 @@ function widget:CommandNotify(cmdID, cmdParams, cmdOpts)
             buildTargetPos[3] - lineVectorUnit[3] * zsize * offset * lineVector2[3]
         }
 
-        Spring.MarkerAddPoint(buildTargetPos[1], buildTargetPos[2], buildTargetPos[3], "!")
+        --Spring.MarkerAddPoint(buildTargetPos[1], buildTargetPos[2], buildTargetPos[3], "!")
 
         -- detect if command is inserted or not
         if not cmdOpts.meta then
