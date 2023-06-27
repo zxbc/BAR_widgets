@@ -34,7 +34,7 @@ local pingCommands = {                             -- the options in the ping wh
     { name = "Rally",   color = { 0.4, 0.8, 0.4, 1 } },
     { name = "Defend",  color = { 0.7, 0.9, 1, 1 } },
     { name = "Retreat", color = { 0.9, 0.7, 1, 1 } },
-    { name = "Alert",   color = { 1, 1, 1, 1 } },
+    { name = "Alert",   color = { 1, 1, 0.5, 1 } },
     { name = "Reclaim", color = { 0.7, 1, 0.7, 1 } },
     { name = "Stop",    color = { 1, 0.2, 0.2, 1 } },
     { name = "Wait",    color = { 0.7, 0.6, 0.3, 1 } },
