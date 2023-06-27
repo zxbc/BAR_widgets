@@ -1,11 +1,12 @@
 function widget:GetInfo()
     return {
         name    = "Ping Wheel",
-        desc    = "Displays a ping wheel when a keybind is held down. Default keybind is 'alt-f', rebindable. Left click to bring up commands wheel, right click for messages wheel. \nNow with two wheel styles! (edit file param to change style)",
+        desc    =
+        "Displays a ping wheel when a keybind is held down. Default keybind is 'alt-f', rebindable. Left click (or mouse 4) to bring up commands wheel, right click (or mouse 5) for messages wheel. \nNow with two wheel styles! (edit file param to change style)",
         author  = "Errrrrrr",
-        date    = "June 24, 2023",
+        date    = "June 27, 2023",
         license = "GNU GPL, v2 or later",
-        version = "2.4",
+        version = "2.5",
         layer   = 999,
         enabled = true,
         handler = true
@@ -23,32 +24,35 @@ end
 --
 -- NEW: styleChoice determines the style of the wheel. 1 = circle, 2 = ring, 3 = custom
 -- NEW: added fade in/out animation (can be turned off by setting both frames numbers to 0)
+-- NEW: you can now use mouse 4 and 5 directly for the two wheels!
+-- NEW: LOTS OF PRETTY COLORS!
 -----------------------------------------------------------------------------------------------
-local custom_keybind_mode = false  -- set to true for custom keybind
+local custom_keybind_mode = false                  -- set to true for custom keybind
 
-local pingCommands = { -- the options in the ping wheel, displayed clockwise from 12 o'clock
-    {name = "Attack",   color = {1, 0.5, 0.3, 1}}, -- color is optional, if no color is chosen it will be white
-    {name = "Rally",    color = {0.4, 0.8, 0.4, 1}},
-    {name = "Defend",   color = {0.7, 0.9, 1, 1}},
-    {name = "Retreat",  color = {0.9, 0.7, 1, 1}},
-    {name = "Alert",    color = {1, 1, 1, 1}},
-    {name = "Reclaim",  color = {0.7, 1, 0.7, 1}},
-    {name = "Stop",     color = {1, 0.2, 0.2, 1}},
-    {name = "Wait",     color = {0.7, 0.6, 0.3, 1}},
+local pingCommands = {                             -- the options in the ping wheel, displayed clockwise from 12 o'clock
+    { name = "Attack",  color = { 1, 0.5, 0.3, 1 } }, -- color is optional, if no color is chosen it will be white
+    { name = "Rally",   color = { 0.4, 0.8, 0.4, 1 } },
+    { name = "Defend",  color = { 0.7, 0.9, 1, 1 } },
+    { name = "Retreat", color = { 0.9, 0.7, 1, 1 } },
+    { name = "Alert",   color = { 1, 1, 1, 1 } },
+    { name = "Reclaim", color = { 0.7, 1, 0.7, 1 } },
+    { name = "Stop",    color = { 1, 0.2, 0.2, 1 } },
+    { name = "Wait",    color = { 0.7, 0.6, 0.3, 1 } },
 }
 
 local pingMessages = {
-    {name = "TY!"},
-    {name = "GJ!"},
-    {name = "DANGER!"},
-    {name = "Sorry!"},
-    {name = "LOL"},
-    {name = "No"},
-    {name = "OMW"},
-    {name = "For sale"},
+    -- let's give these commands rainbow colors!
+    { name = "TY!",      color = { 1, 1, 1, 1 } },
+    { name = "GJ!",      color = { 1, 0.5, 0, 1 } },
+    { name = "DANGER!",  color = { 1, 1, 0, 1 } },
+    { name = "Sorry!",   color = { 0, 1, 0, 1 } },
+    { name = "LOL",      color = { 0, 1, 1, 1 } },
+    { name = "No",       color = { 0, 0, 1, 1 } },
+    { name = "OMW",      color = { 0.5, 0, 1, 1 } },
+    { name = "For sale", color = { 1, 0, 1, 1 } },
 }
 
-local styleChoice = 1         -- 1 = circle, 2 = ring, 3 = custom
+local styleChoice = 1 -- 1 = circle, 2 = ring, 3 = custom
 
 -- Custom style parameters
 local styleConfig = {
@@ -56,77 +60,77 @@ local styleConfig = {
         name = "Circle",
         bgTexture = "LuaUI/images/glow.dds",
         bgTextureSizeRatio = 2.2,
-        bgTextureColor = {0, 0, 0, 0.9},
+        bgTextureColor = { 0, 0, 0, 0.9 },
         dividerInnerRatio = 0.45,
         dividerOuterRatio = 1.1,
-        dividerColor = {1, 1, 1, 0.15},
+        dividerColor = { 1, 1, 1, 0.15 },
         textAlignRadiusRatio = 1.1,
     },
     [2] = {
         name = "Ring",
         bgTexture = "LuaUI/images/enemyspotter.dds",
         bgTextureSizeRatio = 1.9,
-        bgTextureColor = {0, 0, 0, 0.66},
+        bgTextureColor = { 0, 0, 0, 0.66 },
         dividerInnerRatio = 0.6,
         dividerOuterRatio = 1.2,
-        dividerColor = {1, 1, 1, 0.15},
+        dividerColor = { 1, 1, 1, 0.15 },
         textAlignRadiusRatio = 1.1,
     },
     [3] = {
         name = "Custom",
         bgTexture = "",
         bgTextureSizeRatio = 1.6,
-        bgTextureColor = {0, 0, 0, 0.7},
+        bgTextureColor = { 0, 0, 0, 0.7 },
         dividerInnerRatio = 0.4,
         dividerOuterRatio = 1,
-        dividerColor = {1, 1, 1, 0.15},
+        dividerColor = { 1, 1, 1, 0.15 },
         textAlignRadiusRatio = 0.9,
     },
 }
 
 -- On/Off switches
-local player_color_mode = true  -- set to false to use default pingWheelColor instead of player color
-local draw_dividers = true   -- set to false to disable the dividers between options
-local draw_line = false      -- set to true to draw a line from the center to the cursor during selection
+local player_color_mode = true -- set to false to use default pingWheelColor instead of player color
+local draw_dividers = true     -- set to false to disable the dividers between options
+local draw_line = false       -- set to true to draw a line from the center to the cursor during selection
 local draw_circle = false      -- set to false to disable the circle around the ping wheel
 
 -- Fade and spam frames (set to 0 to disable)
 -- NOTE: these are now game frames, not display frames, so always 30 fps
-local numFadeInFrames = 5     -- how many frames to fade in
-local numFadeOutFrames = 5    -- how many frames to fade out
-local numFlashFrames = 8       -- how many frames to flash when spamming
-local spamControlFrames = 8   -- how many frames to wait before allowing another ping
+local numFadeInFrames = 4   -- how many frames to fade in
+local numFadeOutFrames = 4  -- how many frames to fade out
+local numFlashFrames = 7    -- how many frames to flash when spamming
+local spamControlFrames = 8 -- how many frames to wait before allowing another ping
 
 local viewSizeX, viewSizeY = Spring.GetViewGeometry()
 
 -- Sizes and colors
-local pingWheelRadius = 0.1 * math.min(viewSizeX, viewSizeY)    -- 10% of the screen size
-local pingWheelThickness = 2    -- thickness of the ping wheel line drawing
-local centerDotSize = 20        -- size of the center dot
-local deadZoneRadiusRatio = 0.3 -- the center "no selection" area as a ratio of the ping wheel radius
-local outerLimitRadiusRatio = 2 -- the outer limit ratio where "no selection" is active
+local pingWheelRadius = 0.1 * math.min(viewSizeX, viewSizeY) -- 10% of the screen size
+local pingWheelThickness = 2                                 -- thickness of the ping wheel line drawing
+local centerDotSize = 20                                     -- size of the center dot
+local deadZoneRadiusRatio = 0.3                              -- the center "no selection" area as a ratio of the ping wheel radius
+local outerLimitRadiusRatio = 5                              -- the outer limit ratio where "no selection" is active
 
-local pingWheelTextColor = {1, 1, 1, 0.7}
+local pingWheelTextColor = { 1, 1, 1, 0.7 }
 local pingWheelTextSize = 25
-local pingWheelTextHighlightColor = {1, 1, 1, 1}
-local pingWheelTextSpamColor = {0.9, 0.9, 0.9, 0.4}
-local pingWheelPlayerColor = {0.9, 0.8, 0.5, 0.8}
+local pingWheelTextHighlightColor = { 1, 1, 1, 1 }
+local pingWheelTextSpamColor = { 0.9, 0.9, 0.9, 0.4 }
+local pingWheelPlayerColor = { 0.9, 0.8, 0.5, 0.8 }
 
-local pingWheelColor = {0.9, 0.8, 0.5, 0.6}
+local pingWheelColor = { 0.9, 0.8, 0.5, 0.6 }
 ---------------------------------------------------------------
 -- End of params
 
-local globalDim = 1 -- this controls global alpha of all gl.Color calls
-local globalFadeIn = 0 -- how many frames left to fade in
+local globalDim = 1     -- this controls global alpha of all gl.Color calls
+local globalFadeIn = 0  -- how many frames left to fade in
 local globalFadeOut = 0 -- how many frames left to fade out
 
 local bgTexture = "LuaUI/images/glow.dds"
 local bgTextureSizeRatio = 1.9
-local bgTextureColor = {0, 0, 0, 0.8}
+local bgTextureColor = { 0, 0, 0, 0.8 }
 local dividerInnerRatio = 0.4
 local dividerOuterRatio = 1
 local textAlignRadiusRatio = 0.9
-local dividerColor = {1, 1, 1, 0.15}
+local dividerColor = { 1, 1, 1, 0.15 }
 
 local pingWheel = pingCommands
 local keyDown = false
@@ -135,7 +139,7 @@ local displayPingWheel = false
 local pingWorldLocation
 local pingWheelScreenLocation
 local pingWheelSelection = 0
-local spamControl = 0 
+local spamControl = 0
 --local gameFrame = 0
 local flashFrame = 0
 local flashing = false
@@ -155,24 +159,27 @@ local sqrt = math.sqrt
 local soundDefaultSelect = "sounds/commands/cmd-default-select.wav"
 local soundSetTarget = "sounds/commands/cmd-settarget.wav"
 
-local function ColorName(color)
-    if color == nil then
-        return ""
+local function colourNames(R, G, B)
+    local R255 = math.floor(R * 255) --the first \255 is just a tag (not colour setting) no part can end with a zero due to engine limitation (C)
+    local G255 = math.floor(G * 255)
+    local B255 = math.floor(B * 255)
+    if R255 % 10 == 0 then
+        R255 = R255 + 1
     end
-    local r = floor(color[1]*255)
-    local g = floor(color[2]*255)
-    local b = floor(color[3]*255)
-    local a = floor(color[4]*255)
-
-    local colorName = string.char(a) .. string.char(r) .. string.char(g) .. string.char(b)
-    return colorName
+    if G255 % 10 == 0 then
+        G255 = G255 + 1
+    end
+    if B255 % 10 == 0 then
+        B255 = B255 + 1
+    end
+    return "\255" .. string.char(R255) .. string.char(G255) .. string.char(B255) --works thanks to zwzsg
 end
 
 function widget:Initialize()
     -- add the action handler with argument for press and release using the same function call
-    widgetHandler.actionHandler:AddAction(self,"ping_wheel_on", PingWheelAction, {true}, "pR")
-    widgetHandler.actionHandler:AddAction(self,"ping_wheel_on", PingWheelAction, {false}, "r")
-    pingWheelPlayerColor = {Spring.GetTeamColor(Spring.GetMyTeamID())}
+    widgetHandler.actionHandler:AddAction(self, "ping_wheel_on", PingWheelAction, { true }, "pR")
+    widgetHandler.actionHandler:AddAction(self, "ping_wheel_on", PingWheelAction, { false }, "r")
+    pingWheelPlayerColor = { Spring.GetTeamColor(Spring.GetMyTeamID()) }
     if player_color_mode then
         pingWheelColor = pingWheelPlayerColor
     end
@@ -254,7 +261,6 @@ function PingWheelAction(_, _, _, args)
     end
 end
 
-
 -- sets flashing effect to true and turn off wheel display
 local function FlashAndOff()
     flashing = true
@@ -280,7 +286,6 @@ end
 
 function widget:MousePress(mx, my, button)
     if keyDown or button == 4 or button == 5 then
-
         -- functionality of mouse build spacing is put in here, sigh
         -- check if alt is pressed
         local alt, ctrl, meta, shift = spGetModKeyState()
@@ -307,17 +312,18 @@ function widget:MousePress(mx, my, button)
     end
 end
 
-
 -- when mouse is pressed, issue the ping command
 function widget:MouseRelease(mx, my, button)
     if displayPingWheel
-        and pingWorldLocation 
-        and spamControl == 0 
+        and pingWorldLocation
+        and spamControl == 0
     then
         if pingWheelSelection > 0 then
             --Spring.Echo("pingWheelSelection: " .. pingWheel[pingWheelSelection].name)
             local pingText = pingWheel[pingWheelSelection].name
-            Spring.MarkerAddPoint(pingWorldLocation[1], pingWorldLocation[2], pingWorldLocation[3], pingText, false)
+            local color = pingWheel[pingWheelSelection].color or pingWheelColor
+            Spring.MarkerAddPoint(pingWorldLocation[1], pingWorldLocation[2], pingWorldLocation[3],
+                colourNames(color[1], color[2], color[3]) .. pingText, false)
 
             -- Spam control is necessary!
             spamControl = spamControlFrames
@@ -335,9 +341,9 @@ function widget:MouseRelease(mx, my, button)
     end
 end
 
-function widget:GameFrame(gf)
+--[[ function widget:GameFrame(gf)
     gameFrame = gf
-end
+end ]]
 
 local sec, sec2 = 0, 0
 function widget:Update(dt)
@@ -348,7 +354,7 @@ function widget:Update(dt)
         if globalFadeIn > 0 then
             globalFadeIn = globalFadeIn - 1
             if globalFadeIn < 0 then globalFadeIn = 0 end
-            globalDim = 1- globalFadeIn / numFadeInFrames
+            globalDim = 1 - globalFadeIn / numFadeInFrames
         end
         if globalFadeOut > 0 then
             globalFadeOut = globalFadeOut - 1
@@ -358,7 +364,6 @@ function widget:Update(dt)
             end
             globalDim = globalFadeOut / numFadeOutFrames
         end
-
     end
 
     sec2 = sec2 + dt
@@ -380,9 +385,9 @@ function widget:Update(dt)
             local offset = 360 / #pingWheel / 2
             local selection = (floor((360 + angleDeg + offset) / 360 * #pingWheel)) % #pingWheel + 1
             -- deadzone is no selection
-            local dist = sqrt(dx*dx + dy*dy)
+            local dist = sqrt(dx * dx + dy * dy)
             if (dist < deadZoneRadiusRatio * pingWheelRadius)
-            or (dist > outerLimitRadiusRatio * pingWheelRadius)
+                or (dist > outerLimitRadiusRatio * pingWheelRadius)
             then
                 pingWheelSelection = 0
                 --Spring.SetMouseCursor("cursornormal")
@@ -393,7 +398,6 @@ function widget:Update(dt)
             end
 
             --Spring.Echo("pingWheelSelection: " .. pingWheel[pingWheelSelection].name)
-
         end
         if flashing and displayPingWheel then
             if flashFrame > 0 then
@@ -404,7 +408,7 @@ function widget:Update(dt)
             end
         end
         if spamControl > 0 then
-        spamControl = (spamControl == 0) and 0 or (spamControl - 1)
+            spamControl = (spamControl == 0) and 0 or (spamControl - 1)
         end
     end
 end
@@ -426,28 +430,27 @@ end
 
 -- GL speedups
 --local glColor = gl.Color
-local glColor = MyGLColor
-local glLineWidth = gl.LineWidth
-local glPushMatrix = gl.PushMatrix
-local glPopMatrix = gl.PopMatrix
-local glBlending = gl.Blending
-local glDepthTest = gl.DepthTest
-local glBeginEnd = gl.BeginEnd
-local glBeginText = gl.BeginText
-local glEndText = gl.EndText
-local glTexture = gl.Texture
-local glTexRect = gl.TexRect
-local glText = gl.Text
-local glVertex = gl.Vertex
-local glPointSize = gl.PointSize
-local GL_LINES    = GL.LINES
-local GL_LINE_LOOP = GL.LINE_LOOP
-local GL_POINTS = GL.POINTS
-local GL_SRC_ALPHA = GL.SRC_ALPHA
+local glColor                = MyGLColor
+local glLineWidth            = gl.LineWidth
+local glPushMatrix           = gl.PushMatrix
+local glPopMatrix            = gl.PopMatrix
+local glBlending             = gl.Blending
+local glDepthTest            = gl.DepthTest
+local glBeginEnd             = gl.BeginEnd
+local glBeginText            = gl.BeginText
+local glEndText              = gl.EndText
+local glTexture              = gl.Texture
+local glTexRect              = gl.TexRect
+local glText                 = gl.Text
+local glVertex               = gl.Vertex
+local glPointSize            = gl.PointSize
+local GL_LINES               = GL.LINES
+local GL_LINE_LOOP           = GL.LINE_LOOP
+local GL_POINTS              = GL.POINTS
+local GL_SRC_ALPHA           = GL.SRC_ALPHA
 local GL_ONE_MINUS_SRC_ALPHA = GL.ONE_MINUS_SRC_ALPHA
 
 function widget:DrawScreen()
-
     -- if keyDown then draw a dot at where mouse is
     glPushMatrix()
     if keyDown and not displayPingWheel then
@@ -460,19 +463,17 @@ function widget:DrawScreen()
         glColor2(1, 1, 1, 1)
         glText("R-click\nMsgs", mx + 15, my + 11, 12, "os")
         glText("L-click\nCmds", mx - 15, my + 11, 12, "ros")
-
-
     end
     -- we draw a wheel at the pingWheelScreenLocation divided into #pingWheel slices, with the first slice starting at the top
     if displayPingWheel and pingWheelScreenLocation then
-
         -- add the blackCircleTexture as background texture
         glBlending(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA)
-        glColor(bgTextureColor)    -- inverting color for the glow texture :)
+        glColor(bgTextureColor) -- inverting color for the glow texture :)
         glTexture(bgTexture)
         -- use pingWheelRadius as the size of the background texture
         local halfSize = pingWheelRadius * bgTextureSizeRatio
-        glTexRect(pingWheelScreenLocation.x - halfSize, pingWheelScreenLocation.y - halfSize, pingWheelScreenLocation.x + halfSize, pingWheelScreenLocation.y + halfSize)
+        glTexRect(pingWheelScreenLocation.x - halfSize, pingWheelScreenLocation.y - halfSize,
+            pingWheelScreenLocation.x + halfSize, pingWheelScreenLocation.y + halfSize)
         glTexture(false)
 
         -- draw a smooth circle at the pingWheelScreenLocation with 128 vertices
@@ -504,8 +505,8 @@ function widget:DrawScreen()
         end
         -- draw a dotted line connecting from center of wheel to the mouse location
         if draw_line and pingWheelSelection > 0 then
-            glColor(1,1,1,0.5)
-            glLineWidth(pingWheelThickness/4)
+            glColor(1, 1, 1, 0.5)
+            glLineWidth(pingWheelThickness / 4)
             local mx, my = spGetMouseState()
             glBeginEnd(GL_LINES, line, pingWheelScreenLocation.x, pingWheelScreenLocation.y, mx, my)
         end
@@ -513,8 +514,10 @@ function widget:DrawScreen()
         -- draw divider lines between slices
         if draw_dividers then
             local function Line2(angle)
-                glVertex(pingWheelScreenLocation.x + pingWheelRadius * dividerInnerRatio * sin(angle), pingWheelScreenLocation.y + pingWheelRadius * dividerInnerRatio * cos(angle))
-                glVertex(pingWheelScreenLocation.x + pingWheelRadius * dividerOuterRatio * sin(angle), pingWheelScreenLocation.y + pingWheelRadius * dividerOuterRatio * cos(angle))
+                glVertex(pingWheelScreenLocation.x + pingWheelRadius * dividerInnerRatio * sin(angle),
+                    pingWheelScreenLocation.y + pingWheelRadius * dividerInnerRatio * cos(angle))
+                glVertex(pingWheelScreenLocation.x + pingWheelRadius * dividerOuterRatio * sin(angle),
+                    pingWheelScreenLocation.y + pingWheelRadius * dividerOuterRatio * cos(angle))
             end
 
             glColor(dividerColor)
@@ -529,13 +532,13 @@ function widget:DrawScreen()
         -- also flash the text color to indicate ping was issued
         local textColor = pingWheelTextColor
         local flashBlack = false
-        if flashing and (flashFrame % 2 == 0)then
-            textColor = { 1, 1, 1, 0}
+        if flashing and (flashFrame % 2 == 0) then
+            textColor = { 1, 1, 1, 0 }
             flashBlack = true
         else
             textColor = pingWheelTextHighlightColor
         end
-        local angle = (pingWheelSelection -1) * 2 * pi / #pingWheel
+        local angle = (pingWheelSelection - 1) * 2 * pi / #pingWheel
 
         --glColor(textColor)
         glBeginText()
@@ -544,17 +547,19 @@ function widget:DrawScreen()
             local color = pingWheel[pingWheelSelection].color or textColor
             color[4] = 1
             if flashBlack then
-                color = { 0, 0, 0, 0}
+                color = { 0, 0, 0, 0 }
             end
             glColor(color)
-            glText(text, pingWheelScreenLocation.x + pingWheelRadius * textAlignRadiusRatio * sin(angle), pingWheelScreenLocation.y + pingWheelRadius * textAlignRadiusRatio * cos(angle), pingWheelTextSize * 2, "cvos")
+            glText(text, pingWheelScreenLocation.x + pingWheelRadius * textAlignRadiusRatio * sin(angle),
+                pingWheelScreenLocation.y + pingWheelRadius * textAlignRadiusRatio * cos(angle), pingWheelTextSize * 2,
+                "cvos")
         end
 
         --glColor(pingWheelTextColor)
         if spamControl > 0 then
             glColor(pingWheelTextSpamColor)
         end
-        
+
         for i = 1, #pingWheel do
             if i ~= pingWheelSelection or pingWheelSelection == 0 then
                 angle = (i - 1) * 2 * math.pi / #pingWheel
@@ -562,14 +567,15 @@ function widget:DrawScreen()
                 local color = pingWheel[i].color or pingWheelTextColor
                 color[4] = 0.75
                 glColor(color)
-                glText(text, pingWheelScreenLocation.x + pingWheelRadius * textAlignRadiusRatio * math.sin(angle), pingWheelScreenLocation.y + pingWheelRadius * textAlignRadiusRatio * math.cos(angle), pingWheelTextSize, "cvos")
+                glText(text, pingWheelScreenLocation.x + pingWheelRadius * textAlignRadiusRatio * math.sin(angle),
+                    pingWheelScreenLocation.y + pingWheelRadius * textAlignRadiusRatio * math.cos(angle),
+                    pingWheelTextSize, "cvos")
             end
         end
         glEndText()
 
         glLineWidth(1)
         glBlending(false)
-        
     end
     glPopMatrix()
 end
