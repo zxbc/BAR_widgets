@@ -45,7 +45,8 @@ local function IsBuilder(unitDef)
     if unitDef.isFactory and #unitDef.buildOptions > 0 then
         return false
     end
-    return unitDef.isBuilder and (unitDef.canAssist or unitDef.canReclaim)
+    --Spring.Echo("IsBuilder")
+    return unitDef.isBuilder or unitDef.builder or unitDef.canAssist
 end
 
 local function canBuild(builderDefID, targetDefID)
@@ -61,6 +62,7 @@ local function canBuild(builderDefID, targetDefID)
         end
     end
 
+    --Spring.Echo("Builder cannot build the target unit")
     return false -- Builder cannot build the target unit
 end
 
@@ -205,8 +207,8 @@ local function CalculateMovement(builderPos, buildTargetPos, builderID, buildID,
 end
 
 function widget:CommandNotify(cmdID, cmdParams, cmdOpts)
-    if #selectedUnits > max_builders_affected then return end
-    if #cmdParams < 3 then return end
+    if #selectedUnits > max_builders_affected then return false end
+    if #cmdParams < 3 then return false end
 
     if (cmdID > 0) then return false end
     -- obtain the unitID of the unit being built through cmdID
@@ -223,7 +225,7 @@ function widget:CommandNotify(cmdID, cmdParams, cmdOpts)
     local builder1X, _, builder1Z = GetUnitFinalPosition(builder1)
     local obstructed = isObstructed(builder1, buildID, builder1X, builder1Z, cmdParams[1], cmdParams[3], buildFacing)
 
-    if not obstructed and obstructed == 2 then return end -- not obstructed by anything
+    if not obstructed and obstructed == 2 then return false end -- not obstructed by anything
 
     -- add to a list of all the builders that can build this unit
     -- add to a list of all the assistants that can assist this unit
@@ -245,12 +247,16 @@ function widget:CommandNotify(cmdID, cmdParams, cmdOpts)
 
     --Spring.Echo("Number of assistants: " .. #assistants)
     --Spring.Echo("Number of builders: " .. #builders)
+    -- merge builders and assistants into one list
+    for _, unitID in ipairs(assistants) do
+        builders[#builders+1] = unitID
+    end
 
     --local mainBuilder = builders[1]
     --table.remove(assistants, mainBuilder)
 
     local builderPos = { 0, 0, 0 }
-    for _, unitID in ipairs(assistants) do
+    for _, unitID in ipairs(builders) do
         local x, y, z
         if cmdOpts.shift then
             builderPos[1], builderPos[2], builderPos[3] = GetUnitFinalPosition(unitID)
