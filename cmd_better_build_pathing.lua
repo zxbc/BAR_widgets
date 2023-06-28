@@ -95,27 +95,11 @@ local function GetUnitFinalPosition(uID)
     if cmds then
         for i = #cmds, 1, -1 do
             local cmd = cmds[i]
-            if (cmd.id < 0) or positionCmds[cmd.id] then
-                local params = cmd.params
-                if #params >= 3 then
-                    return params[1], params[2], params[3]
-                else
-                    if #params == 1 then
-                        local pID = params[1]
-                        local px, py, pz
-
-                        if pID > 32000 then
-                            px, py, pz = spGetFeaturePosition(pID - 32000)
-                        else
-                            px, py, pz = spGetUnitPosition(pID)
-                        end
-
-                        if px then
-                            return px, py, pz
-                        end
-                    end
-                end
+            local params = cmd.params
+            if #params >= 3 and positionCmds[cmd.id] then
+                return params[1], params[2], params[3]
             end
+    
         end
     end
 
@@ -148,7 +132,7 @@ local function isObstructed(builderID, buildtargetID, builderX, builderZ, buildX
     if builderMinX > buildtargetMaxX + tolerance or builderMaxX < buildtargetMinX - tolerance then return false end
     if builderMinZ > buildtargetMaxZ + tolerance or builderMaxZ < buildtargetMinZ - tolerance then return false end
 
-    --Spring.Echo("isObstructed: true")
+    Spring.Echo("Building obstructed!")
     return true
 end
 
@@ -201,7 +185,7 @@ local function CalculateMovement(builderPos, buildTargetPos, builderID, buildID,
         -- Move along z
         moveVector[3] = 1
     end
-    --Spring.Echo("Line vector for unitID: ".. builderID..", : " .. moveVector[1] .. ", " .. moveVector[3])
+    Spring.Echo("Line vector for unitID: ".. builderID..", : " .. moveVector[1] .. ", " .. moveVector[3])
 
     return moveVector
 end
@@ -217,15 +201,22 @@ function widget:CommandNotify(cmdID, cmdParams, cmdOpts)
 
     local buildFacing = Spring.GetBuildFacing()
 
-    -- the following gives us 0 if obstructed by a unit, 1 if obstructed by a feature, and 2 if not obstructed
-    local obstructed2 = Spring.TestBuildOrder(buildID, cmdParams[1], cmdParams[2], cmdParams[3], buildFacing)
-
     -- for now we only double check the first builder's final position in queue, maybe in future we'll include all builders
     local builder1 = selectedUnits[1]
-    local builder1X, _, builder1Z = GetUnitFinalPosition(builder1)
-    local obstructed = isObstructed(builder1, buildID, builder1X, builder1Z, cmdParams[1], cmdParams[3], buildFacing)
+    local builder1X, _, builder1Z = spGetUnitPosition(builder1)
+    if cmdOpts.shift then return false end
+--[[         builder1X, _, builder1Z = GetUnitFinalPosition(builder1)
+    end ]]
 
-    if not obstructed and obstructed == 2 then return false end -- not obstructed by anything
+    -- 0 - obstructed; 1 -obstructed by unit, 2: not obstructed
+    local obstructed2 = Spring.TestBuildOrder(buildID, cmdParams[1], cmdParams[2], cmdParams[3], buildFacing)
+
+    local obstructed = isObstructed(builder1, buildID, builder1X, builder1Z, cmdParams[1], cmdParams[3], buildFacing)
+--[[     local tempMoveVector = CalculateMovement({ builder1X, 0, builder1Z }, { cmdParams[1], 0, cmdParams[3] }, builder1, buildID, buildFacing, 1)
+    if tempMoveVector == nil then return false end
+    local obstructed = tempMoveVector[1] > 0 or tempMoveVector[3] > 0 ]]
+
+    if obstructed == 2 then return false end -- not obstructed by anything
 
     -- add to a list of all the builders that can build this unit
     -- add to a list of all the assistants that can assist this unit
@@ -264,7 +255,7 @@ function widget:CommandNotify(cmdID, cmdParams, cmdOpts)
             builderPos[1], builderPos[2], builderPos[3] = spGetUnitPosition(unitID)
         end
 
-        if buildID == nil then return end
+        if buildID == nil then return false end
         local builderID = unitID
         local buildTargetPos = { cmdParams[1], cmdParams[2], cmdParams[3] }
 
@@ -303,7 +294,7 @@ function widget:CommandNotify(cmdID, cmdParams, cmdOpts)
         if not cmdOpts.meta then
             -- issue command move
             spGiveOrderToUnit(unitID, CMD.MOVE, buildTargetPos, cmdOpts)
-            -- Spring.Echo("Moving builder to: " .. buildTargetPos[1] .. ", " .. buildTargetPos[2] .. ", " .. buildTargetPos[3])
+            --Spring.Echo("Moving builder to: " .. buildTargetPos[1] .. ", " .. buildTargetPos[2] .. ", " .. buildTargetPos[3])
             -- let's also draw something shiny at the location we want to move to
             --Spring.MarkerAddPoint(buildTargetPos[1], buildTargetPos[2], buildTargetPos[3], "*")
 
