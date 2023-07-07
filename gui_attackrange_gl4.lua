@@ -503,9 +503,28 @@ local vsSrc = [[
 	//__ENGINEUNIFORMBUFFERDEFS__
 	
 	
-	layout(std140, binding=0) readonly buffer MatrixBuffer {
-		mat4 UnitPieces[];
+	struct SUniformsBuffer {
+		uint composite; //     u8 drawFlag; u8 unused1; u16 id;
+		
+		uint unused2;
+		uint unused3;
+		uint unused4;
+
+		float maxHealth;
+		float health;
+		float unused5;
+		float unused6;
+		
+		vec4 drawPos;
+		vec4 speed;
+		vec4[4] userDefined; //can't use float[16] because float in arrays occupies 4 * float space
 	};
+
+	layout(std140, binding=1) readonly buffer UniformsBuffer {
+		SUniformsBuffer uni[];
+	}; 
+
+	#define UNITID (uni[instData.y].composite >> 16)
 	
 	
 	#line 11000
@@ -572,9 +591,7 @@ local vsSrc = [[
 	
 	void main() {
 		// Get the center pos of the unit
-		uint baseIndex = instData.x; // this tells us which unit matrix to find
-		mat4 modelMatrix = UnitPieces[baseIndex]; // This gives us the models  world pos and rot matrix
-		vec3 modelWorldPos = modelMatrix[3].xyz;
+		vec3 modelWorldPos = uni[instData.y].drawPos.xyz;
 		
 		circleprogress.xy = circlepointposition.xy;
 		circleprogress.w = circlepointposition.z;
@@ -760,9 +777,7 @@ local fsSrc = [[
 		
 		fragColor = vec4(blendedcolor.x, blendedcolor.y, blendedcolor.z, blendedcolor.w * finalAlpha);
 	}
-	]]
-
-
+]]
 
 local cacheTable = {}
 for i = 1, 24 do cacheTable[i] = 0 end
@@ -1409,7 +1424,12 @@ function widget:DrawWorldPreUnit()
 			attackRangeShader:SetUniform("drawMode", 1.0)
 			attackRangeShader:SetUniform("drawAlpha", 1.0)
 			DRAWRINGS(GL_LINE_LOOP, 'externallinethickness') -- DRAW THE OUTER RINGS
+			-- This is the correct way to exit out of the stencil mode, to not break drawing of area commands:
 			glStencilTest(false)
+			glStencilMask(255)
+			glStencilOp(GL_KEEP, GL_KEEP, GL_KEEP)
+			glClear(GL_STENCIL_BUFFER_BIT)
+			-- All the above are needed :(
 		end
 
 		if colorConfig.drawInnerRings then
