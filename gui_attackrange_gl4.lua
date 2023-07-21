@@ -1,13 +1,14 @@
 include("keysym.h.lua")
 
+local versionNumber = "1.1"
+
 function widget:GetInfo()
 	return {
 		name    = "Attack Range GL4",
 		desc    =
-		"Displays attack ranges of selected units. Alt+, and alt+. (alt comma and alt period) to cycle backward and forward through display config of current unit (saved through games!). Custom keybind to toggle cursor unit range on and off.",
+		"[v" .. string.format("%s", versionNumber ) .. "] Displays attack ranges of selected units. Alt+, and alt+. (alt comma and alt period) to cycle backward and forward through display config of current unit (saved through games!). Custom keybind to toggle cursor unit range on and off.",
 		author  = "Errrrrrr, Beherith",
-		date    = "June 2023",
-		version = "1.0",
+		date    = "July 20, 2023",
 		license = "GPLv2",
 		layer   = -99,
 		enabled = true,
@@ -17,25 +18,12 @@ end
 
 ---------------------------------------------------------------------------------------------------------------------------
 -- Bindable action:   cursor_range_toggle
+-- The widget's individual unit type's display setup is saved in LuaUI/config/AttackRangeConfig2.lua
 ---------------------------------------------------------------------------------------------------------------------------
 local shift_only = false                -- only show ranges when shift is held down
 local cursor_unit_range = true          -- displays the range of the unit at the mouse cursor (if there is one)
-local group_selection_fade_scale = 0.75 -- can set to 0 to have inner rings not dim at all with large group selection
-local builder_fade_scale = 0.05         -- inner ring fade scale for builders
 
-local cannon_separate_stencil = false   -- set to true to have cannon and ground be on different stencil mask
-
--- alpha settings
-local outer_ring_alpha = 0.80 -- this is the outer edge formed by the stenciled rings
-local inner_ring_alpha = 0.20 -- this is the inner rings that overlap from each unit
--- note that units with multiple weapons also rely on this to display their short ranges
--- if you want to reduce clutter with large unit count, turn up group_selection_fade_scale
-local fill_alpha = 0.10 -- this is the solid color in the middle of the stencil
-local outer_fade_height_difference = 3500
 ---------------------------------------------------------------------------------------------------------------------------
-local show_selected_weapon_ranges = true
-local innerRingDim = 1 -- don't change this
-
 ------------------ CONFIGURABLES --------------
 
 local buttonConfig = {
@@ -44,45 +32,48 @@ local buttonConfig = {
 }
 
 local colorConfig = {
-	--An array of R, G, B, Alpha
 	drawStencil = true,            -- wether to draw the outer, merged rings (quite expensive!)
+	cannon_separate_stencil = false,  -- set to true to have cannon and ground be on different stencil mask
 	drawInnerRings = true,         -- wether to draw inner, per attack rings (very cheap)
-	externalalpha = outer_ring_alpha, -- alpha of outer rings
-	internalalpha = inner_ring_alpha, -- alpha of inner rings
-	distanceScaleStart = 1500,     -- Linewidth is 100% up to this camera height
-	distanceScaleEnd = 5000,       -- Linewidth becomes 50% above this camera height
+
+	externalalpha = 0.80, -- alpha of outer rings
+	internalalpha = 0.20, -- alpha of inner rings
+	fill_alpha = 0.10,  -- this is the solid color in the middle of the stencil
+	outer_fade_height_difference = 2500, -- this is the height difference at which the outer ring starts to fade out compared to inner rings
+	--distanceScaleStart = 1500,     -- Linewidth is 100% up to this camera height
+	--distanceScaleEnd = 5000,       -- Linewidth becomes 50% above this camera height
 	ground = {
 		color = { 1.0, 0.22, 0.05, 0.60 },
 		fadeparams = { 1500, 2200, 1.0, 0.0 }, -- FadeStart, FadeEnd, StartAlpha, EndAlpha
-		groupselectionfadescale = group_selection_fade_scale,
+		groupselectionfadescale = 0.75,
 		externallinethickness = 3.0,
 		internallinethickness = 2.0,
 	},
 	nano = {
 		color = { 0.24, 1.0, 0.2, 0.40 },
 		fadeparams = { 2000, 4000, 1.0, 0.0 }, -- FadeStart, FadeEnd, StartAlpha, EndAlpha
-		groupselectionfadescale = builder_fade_scale,
+		groupselectionfadescale = 0.05,
 		externallinethickness = 3.0,
 		internallinethickness = 2.0,
 	},
 	AA = {
 		color = { 0.8, 0.44, 2.0, 0.40 },
 		fadeparams = { 1500, 2200, 1.0, 0.0 }, -- FadeStart, FadeEnd, StartAlpha, EndAlpha
-		groupselectionfadescale = group_selection_fade_scale,
+		groupselectionfadescale = 0.75,
 		externallinethickness = 2.5,
 		internallinethickness = 2.0,
 	},
 	cannon = {
 		color = { 1.0, 0.22, 0.05, 0.60 },
 		fadeparams = { 1500, 2200, 1.0, 0.0 }, -- FadeStart, FadeEnd, StartAlpha, EndAlpha
-		groupselectionfadescale = group_selection_fade_scale,
+		groupselectionfadescale = 0.75,
 		externallinethickness = 3.0,
 		internallinethickness = 2.0,
 	},
 }
 
 ----------------------------------
-
+local show_selected_weapon_ranges = true
 local buttonconfigmap = { 'ground', 'nano', 'AA', 'cannon' }
 local DEBUG = false --generates debug message
 local weaponTypeMap = { 'ground', 'nano', 'AA', 'cannon' }
@@ -110,7 +101,7 @@ local builders = {} -- { unitID = unitDef, ...}
 local unitToggles = {}
 local unitTogglesChunked = {}
 
-local chunk, err = loadfile("LuaUI/config/AttackRangeConfig.lua")
+local chunk, err = loadfile("LuaUI/config/AttackRangeConfig2.lua")
 if chunk then
 	local tmp = {}
 	setfenv(chunk, tmp)
@@ -676,7 +667,7 @@ local vsSrc = [[
 		// FadeStart, FadeEnd, StartAlpha, EndAlpha
 		float fadeDist = visibility.y - visibility.x;
 		if (ISDGUN > 0.5) {
-			FADEALPHA  = clamp((visibility.y + fadeDistOffset + 3000 - distToCam)/(fadeDist),visibility.w,visibility.z);
+			FADEALPHA  = clamp((visibility.y + fadeDistOffset + 1000 - distToCam)/(fadeDist),visibility.w,visibility.z);
 		} else {
 			FADEALPHA  = clamp((visibility.y + fadeDistOffset - distToCam)/(fadeDist),visibility.w,visibility.z);
 		}
@@ -1070,21 +1061,6 @@ function widget:Initialize()
 
 	widgetHandler.actionHandler:AddAction(self, "cursor_range_toggle", ToggleCursorRange, nil, "p")
 
-	--[[ 	WG['defrange'] = {}
-	for _,ae in ipairs({'ally','enemy'}) do
-		local Ae = string.upper(string.sub(ae, 1, 1)) .. string.sub(ae, 2)
-		for _,wt in ipairs({'ground','nano','AA'}) do
-			local Wt = string.upper(string.sub(wt, 1, 1)) .. string.sub(wt, 2)
-			WG['defrange']['get'..Ae..Wt] = function() return buttonConfig[ae][wt] end
-			WG['defrange']['set'..Ae..Wt] = function(value)
-				buttonConfig[ae][wt] = value
-				Spring.Echo(string.format("Attack Range GL4 Setting %s%s to %s",Ae,Wt, value and 'on' or 'off'))
-				if WG['unittrackerapi'] and WG['unittrackerapi'].visibleUnits then
-					widget:VisibleUnitsChanged(WG['unittrackerapi'].visibleUnits, nil)
-				end
-			end
-		end
-	end ]]
 	myAllyTeam = Spring.GetMyAllyTeamID()
 	local allyteamlist = Spring.GetAllyTeamList()
 	--Spring.Echo("# of allyteams = ", #allyteamlist)
@@ -1372,7 +1348,7 @@ local function DRAWRINGS(primitiveType, linethickness)
 	for i, allyState in ipairs(allyenemypairs) do
 		local atkRangeClass = allyState .. "cannon"
 		local iT = attackRangeVAOs[atkRangeClass]
-		local stencilOffset = cannon_separate_stencil and 3 or 0
+		local stencilOffset = colorConfig.cannon_separate_stencil and 3 or 0
 		stencilMask = 2 ^ (4 * (i - 1) + stencilOffset) -- if 0 then it's on the same as "ground"
 		drawcounts[stencilMask] = iT.usedElements
 		if iT.usedElements > 0 then               --and buttonConfig[allyState]["ground"] then
@@ -1410,8 +1386,8 @@ function widget:DrawWorldPreUnit()
 			attackRangeShader:SetUniform("selBuilderCount", selBuilderCount)
 			attackRangeShader:SetUniform("drawMode", 0.0)
 
-			attackRangeShader:SetUniform("drawAlpha", fill_alpha)
-			attackRangeShader:SetUniform("fadeDistOffset", outer_fade_height_difference)
+			attackRangeShader:SetUniform("drawAlpha", colorConfig.fill_alpha)
+			attackRangeShader:SetUniform("fadeDistOffset", colorConfig.outer_fade_height_difference)
 			DRAWRINGS(GL_TRIANGLE_FAN) -- FILL THE CIRCLES
 			glLineWidth(math.max(0.1, 4 + math.sin(gameFrame * 0.04) * 10))
 			glColorMask(true, true, true, true) -- re-enable color drawing
@@ -1482,16 +1458,37 @@ function widget:UnitDestroyed(unitID, unitDefID, unitTeam, attackerID, attackerD
 end
 
 --SAVE / LOAD CONFIG FILE
+-----------------------------------------------------------------------------------------
+-- Useful config options to have for players in options menu are:
+-- 1. "shift_only" - only show ranges when shift is held
+-- 2. "cursor_unit_range" - show range of unit under cursor
+-- 3. "colorConfig" - table of color options BUT ONLY THE FOLLOWING FIELDS:
+--		"fill_alpha", "externalalpha", "internalalpha", "outer_fade_height_difference"
+--		"ground.externallinethickness", "ground.internallinethickness"
+--		"AA.externallinethickness", "AA.internallinethickness"
+--		"cannon.externallinethickness", "cannon.internallinethickness"
+--		"nano.externallinethickness", "nano.internallinethickness"
+-- Other values inside colorConfig are potentially useful but not nearly as important
+--
+-- The rest of the config data should be left to advanced users to tweak in widget's own config files (which will be generated upon use)
+-- The config file is saved and load at LuaUI/config/AttackRangeConfig2.lua
+-----------------------------------------------------------------------------------------
 function widget:GetConfigData()
 	local data = {}
-	data["enabled"] = buttonConfig
+	data["enabled"] = buttonConfig -- currently NOT used
+	data["shift_only"] = shift_only
+	data["cursor_unit_range"] = cursor_unit_range
+	data["colorConfig"] = colorConfig
 	return data
 end
 
 function widget:SetConfigData(data)
 	if data ~= nil then
-		if data["enabled"] ~= nil then
-			buttonConfig = data["enabled"]
+		if data["enabled"] ~= nil and data["shift_only"] ~= nil and data["cursor_unit_range"] ~= nil and data["colorConfig"] ~= nil	then
+			buttonConfig = data["enabled"]	-- currently NOT used
+			shift_only = data["shift_only"]
+			cursor_unit_range = data["cursor_unit_range"]
+			colorConfig = data["colorConfig"]
 			--printDebug("enabled config found...")
 		end
 	end
