@@ -24,12 +24,18 @@ local prevUIState = nil
 local screenshotIndex = 0
 local initialCamState = nil -- Store the camera state when the widget is activated
 
+local gameOver = false -- Flag to indicate if game is over
+local gameOverFrame = nil -- Frame number when game ended
+
 local fullScreenCapture = false -- By default, we capture the boxed region of the battlefield
 local spSendCommands = Spring.SendCommands
 
 function widget:Initialize()
     -- GUI shader doesn't play nice with screenshots
     widgetHandler:DisableWidget('GUI Shader')
+    -- Disabling Autoquit now so we stay in game to capture some end game frames
+    widgetHandler:DisableWidget('Autoquit') -- Disable the Autoquit widget when this widget is enabled
+
 
     widgetHandler.actionHandler:AddAction(self, "toggle_screenshot_widget", Toggle, nil, "p") -- Add the action to the widgetHandler
     widgetHandler.actionHandler:AddAction(self, "toggle_full_screen_capture", ToggleFullScreenCapture, nil, "p") -- Add the action to the widgetHandler
@@ -71,6 +77,16 @@ function widget:GameFrame(n)
     if active and n % framesPerScreenshot == 0 then
         takeScreenshot = true
     end
+
+    if gameOver and n - gameOverFrame >= 300 then
+        widgetHandler:EnableWidget('Autoquit')
+    end
+
+end
+
+function widget:GameOver()
+    gameOver = true
+    gameOverFrame = Spring.GetGameFrame() -- Get the current frame number
 end
 
 local updates = 0
