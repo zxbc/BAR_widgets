@@ -13,6 +13,7 @@ end
 
 local toggle_key = "shift+alt+p" -- The key to toggle the widget on/off
 local fullscreen_key = "shift+alt+o" -- The key to toggle fullscreen capture on/off
+local game_over_delay = 300 -- Delay in frames after game over before autoquit is enabled, default to 300 (10s)
 
 local active = false -- The widget is inactive by default
 local framesPerScreenshot = 150 
@@ -78,7 +79,7 @@ function widget:GameFrame(n)
         takeScreenshot = true
     end
 
-    if gameOver and n - gameOverFrame >= 300 then
+    if gameOver and n - gameOverFrame >= game_over_delay then
         widgetHandler:EnableWidget('Autoquit')
     end
 
