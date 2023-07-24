@@ -34,9 +34,9 @@ local spSendCommands = Spring.SendCommands
 function widget:Initialize()
     -- GUI shader doesn't play nice with screenshots
     widgetHandler:DisableWidget('GUI Shader')
-    -- Disabling Autoquit now so we stay in game to capture some end game frames
-    widgetHandler:DisableWidget('Autoquit') -- Disable the Autoquit widget when this widget is enabled
-
+    
+    widgetHandler:EnableWidget('Grid menu')
+    widgetHandler:EnableWidget('Order menu')
 
     widgetHandler.actionHandler:AddAction(self, "toggle_screenshot_widget", Toggle, nil, "p") -- Add the action to the widgetHandler
     widgetHandler.actionHandler:AddAction(self, "toggle_full_screen_capture", ToggleFullScreenCapture, nil, "p") -- Add the action to the widgetHandler
@@ -53,6 +53,12 @@ function ToggleFullScreenCapture()
     return true
 end
 
+function widget:Shutdown()
+    widgetHandler:EnableWidget('Grid menu')
+    widgetHandler:EnableWidget('Order menu')
+    widgetHandler:EnableWidget('Autoquit')
+end
+
 
 function Toggle()
     active = not active
@@ -60,6 +66,8 @@ function Toggle()
         -- toggling off all the intruding UI widgets
         widgetHandler:DisableWidget('Grid menu')
         widgetHandler:DisableWidget('Order menu')
+        -- Disabling Autoquit now so we stay in game to capture some end game frames
+        widgetHandler:DisableWidget('Autoquit') -- Disable the Autoquit widget when this widget is enabled
 
         initialCamState = Spring.GetCameraState()
         Spring.SendCommands("viewicons") -- Keep icons on
@@ -68,6 +76,7 @@ function Toggle()
         -- toggling on all the intruding UI widgets
         widgetHandler:EnableWidget('Grid menu')
         widgetHandler:EnableWidget('Order menu')
+        widgetHandler:EnableWidget('Autoquit')
 
         Spring.Echo("AutoScreenshot widget has been turned OFF.") -- Print a console message
     end
