@@ -34,30 +34,22 @@ local spSendCommands = Spring.SendCommands
 -- building a list of nuke weapon ids
 local nukeWeapons = {}
 
+
 function widget:Initialize()
-    -- GUI shader doesn't play nice with screenshots
-    widgetHandler:DisableWidget('GUI Shader')
-    
     widgetHandler:EnableWidget('Grid menu')
     widgetHandler:EnableWidget('Order menu')
 
     widgetHandler.actionHandler:AddAction(self, "toggle_screenshot_widget", Toggle, nil, "p") -- Add the action to the widgetHandler
     widgetHandler.actionHandler:AddAction(self, "toggle_full_screen_capture", ToggleFullScreenCapture, nil, "p") -- Add the action to the widgetHandler
 
-    for i = 1, #WeaponDefs do
-        local weapon = WeaponDefs[i]
-        -- This is a placeholder condition, replace it with conditions that define nuke weapons
-        if weapon.damage > 10000 and weapon.areaOfEffect > 500 then
-            nukeWeapons[i] = true
-        end
-    end
-
 end
 
 -- hacky but maybe it works
 function widget:Explosion(weaponDefID, px, py, pz, ownerID)
     -- Check if the explosion is from a nuke
-    if nukeWeapons[weaponDefID] and active then
+    local weaponDef = WeaponDefs[weaponDefID]
+    local isNuke = weaponDef.craterAreaOfEffect > 1200 -- Check if the weapon is a nuke
+    if isNuke and active then
         return true -- true prevents the engine's default explosion effect
     end
 end
@@ -124,6 +116,7 @@ function widget:Update()
     if updates > 30 then
         spSendCommands({"bind " .. toggle_key .. " toggle_screenshot_widget"}) -- Use Spring's command to bind the hotkey
         spSendCommands({"bind " .. fullscreen_key .. " toggle_full_screen_capture"}) -- Use Spring's command to bind the hotkey
+
     end
     if active then
         -- Keep the camera fixed
