@@ -42,13 +42,29 @@ function widget:Initialize()
     widgetHandler.actionHandler:AddAction(self, "toggle_screenshot_widget", Toggle, nil, "p") -- Add the action to the widgetHandler
     widgetHandler.actionHandler:AddAction(self, "toggle_full_screen_capture", ToggleFullScreenCapture, nil, "p") -- Add the action to the widgetHandler
 
+    -- Get the weapon ids of all the nukes
+    local weaponDefs = WeaponDefs
+    for i = 1, #weaponDefs do
+        local weaponDef = weaponDefs[i]
+        if weaponDef.type == "StarburstLauncher" then
+            nukeWeapons[#nukeWeapons + 1] = i
+        end
+    end
 end
 
 -- hacky but maybe it works
 function widget:Explosion(weaponDefID, px, py, pz, ownerID)
     -- Check if the explosion is from a nuke
-    local weaponDef = WeaponDefs[weaponDefID]
-    local isNuke = weaponDef.craterAreaOfEffect > 1200 -- Check if the weapon is a nuke
+
+    -- check if the weaponDefID is in the list of nuke weapon ids
+    local isNuke = false
+    for i = 1, #nukeWeapons do
+        if nukeWeapons[i] == weaponDefID then
+            isNuke = true
+            break
+        end
+    end
+    -- check if the 
     if isNuke and active then
         return true -- true prevents the engine's default explosion effect
     end
