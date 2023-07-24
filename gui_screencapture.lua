@@ -31,6 +31,9 @@ local gameOverFrame = nil -- Frame number when game ended
 local fullScreenCapture = false -- By default, we capture the boxed region of the battlefield
 local spSendCommands = Spring.SendCommands
 
+-- building a list of nuke weapon ids
+local nukeWeapons = {}
+
 function widget:Initialize()
     -- GUI shader doesn't play nice with screenshots
     widgetHandler:DisableWidget('GUI Shader')
@@ -41,6 +44,22 @@ function widget:Initialize()
     widgetHandler.actionHandler:AddAction(self, "toggle_screenshot_widget", Toggle, nil, "p") -- Add the action to the widgetHandler
     widgetHandler.actionHandler:AddAction(self, "toggle_full_screen_capture", ToggleFullScreenCapture, nil, "p") -- Add the action to the widgetHandler
 
+    for i = 1, #WeaponDefs do
+        local weapon = WeaponDefs[i]
+        -- This is a placeholder condition, replace it with conditions that define nuke weapons
+        if weapon.damage > 10000 and weapon.areaOfEffect > 500 then
+            nukeWeapons[i] = true
+        end
+    end
+
+end
+
+-- hacky but maybe it works
+function widget:Explosion(weaponDefID, px, py, pz, ownerID)
+    -- Check if the explosion is from a nuke
+    if nukeWeapons[weaponDefID] and active then
+        return true -- true prevents the engine's default explosion effect
+    end
 end
 
 function ToggleFullScreenCapture()
