@@ -12,6 +12,7 @@ function widget:GetInfo()
 		license = "GPLv2",
 		layer   = -99,
 		enabled = true,
+		handler = true,
 	}
 end
 
@@ -202,11 +203,7 @@ local function getNextWeaponCombination(currentCombination, direction)
 	local numWeapons = #currentCombination
 	local bitmap = convertToBitmap(currentCombination)
 
-	if direction == 1 then
-		bitmap = (bitmap + 1) % (2 ^ numWeapons)
-	elseif direction == -1 then
-		bitmap = (bitmap - 1) % (2 ^ numWeapons)
-	end
+	bitmap = (bitmap + direction) % (2 ^ numWeapons)
 
 	return convertToStatusTable(bitmap, numWeapons)
 end
@@ -1062,10 +1059,10 @@ function widget:Initialize()
 		unitToggles[i] = v
 	end
 
-	widgetHandler:AddAction("attackrange_cursor_toggle", ToggleCursorRange, nil, "p")
-	widgetHandler:AddAction("attackrange_nextweaponconfig", WeaponDisplayCycleForward, nil, "p")
+	widgetHandler.actionHandler:AddAction(self, "attackrange_cursor_toggle", ToggleCursorRange, nil, "p")
+	widgetHandler.actionHandler:AddAction(self, "attackrange_nextweaponconfig", WeaponDisplayCycleForward, nil, "p")
 
-	widgetHandler:AddAction("attackrange_prevweaponconfig", WeaponDisplayCycleBackward, nil, "p")
+	widgetHandler.actionHandler:AddAction(self, "attackrange_prevweaponconfig", WeaponDisplayCycleBackward, nil, "p")
 
 
 	myAllyTeam = Spring.GetMyAllyTeamID()

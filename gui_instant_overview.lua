@@ -7,6 +7,7 @@ function widget:GetInfo()
         license = "GNU GPL, v2 or later",
         layer   = 0,
         enabled = true,
+        handler = true,
     }
 end
 
@@ -125,7 +126,8 @@ function widget:KeyPress(key, mods, isRepeat)
             camState.py = Spring.GetGroundHeight(Game.mapSizeX * 0.5, Game.mapSizeZ * 0.5)
             camState.pz = Game.mapSizeZ * 0.5
             camState.rx = oldCamState.rx or 0
-            camState.ry = oldCamState.ry
+            camState.ry = oldCamState.ry or 0
+            camState.rz = oldCamState.rz or 0
 
             if mapRatio > aspectRatio then
                 camState.height = Game.mapSizeX / (2 * math.tan(math.rad(camState.fov / 2)))

@@ -9,6 +9,7 @@ function widget:GetInfo()
         version = "2.5",
         layer   = 999,
         enabled = true,
+        handler = true,
     }
 end
 
@@ -176,8 +177,8 @@ end
 
 function widget:Initialize()
     -- add the action handler with argument for press and release using the same function call
-    widgetHandler:AddAction("ping_wheel_on", PingWheelAction, { true }, "pR")
-    widgetHandler:AddAction("ping_wheel_on", PingWheelAction, { false }, "r")
+    widgetHandler.actionHandler:AddAction(self, "ping_wheel_on", PingWheelAction, { true }, "pR")
+    widgetHandler.actionHandler:AddAction(self, "ping_wheel_on", PingWheelAction, { false }, "r")
     pingWheelPlayerColor = { Spring.GetTeamColor(Spring.GetMyTeamID()) }
     if player_color_mode then
         pingWheelColor = pingWheelPlayerColor
@@ -194,7 +195,7 @@ function widget:Initialize()
     dividerColor = style.dividerColor
 
     -- we disable the mouse build spacing widget here, sigh
-    --widgetHandler:DisableWidget("Mouse Buildspacing")
+    widgetHandler:DisableWidget("Mouse Buildspacing")
 end
 
 -- when widget exits, re-enable the mouse build spacing widget
