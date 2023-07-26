@@ -6,18 +6,21 @@ function widget:GetInfo()
 	return {
 		name    = "Attack Range GL4",
 		desc    =
-		"[v" .. string.format("%s", versionNumber ) .. "] Displays attack ranges of selected units. Alt+, and alt+. (alt comma and alt period) to cycle backward and forward through display config of current unit (saved through games!). Custom keybind to toggle cursor unit range on and off.",
+		"[v" .. string.format("%s", versionNumber ) .. "] Displays attack ranges of selected units. Custom keybind actions: attackrange_cursor_toggle, attackrange_nextweaponconfig, attackrange_prevweaponconfig",
 		author  = "Errrrrrr, Beherith",
 		date    = "July 20, 2023",
 		license = "GPLv2",
 		layer   = -99,
 		enabled = true,
-		handler = true,
 	}
 end
 
 ---------------------------------------------------------------------------------------------------------------------------
--- Bindable action:   cursor_range_toggle
+-- Bindable action: 
+-- -- Toggle cursor unit range on and off: attackrange_cursor_toggle
+-- -- Unit weapon range dislay cycle forward: attackrange_nextweaponconfig
+-- -- Unit weapon range dislay cycle backward: attackrange_prevweaponconfig
+
 -- The widget's individual unit type's display setup is saved in LuaUI/config/AttackRangeConfig2.lua
 ---------------------------------------------------------------------------------------------------------------------------
 local shift_only = false                -- only show ranges when shift is held down
@@ -1042,7 +1045,7 @@ local function initGL4()
 	return makeShaders()
 end
 
-function ToggleCursorRange(_, _, args)
+function ToggleCursorRange(_, _, _, args)
 	cursor_unit_range = not cursor_unit_range
 	Spring.Echo("Cursor unit range set to: " .. (cursor_unit_range and "ON" or "OFF"))
 end
@@ -1059,7 +1062,11 @@ function widget:Initialize()
 		unitToggles[i] = v
 	end
 
-	widgetHandler.actionHandler:AddAction(self, "cursor_range_toggle", ToggleCursorRange, nil, "p")
+	widgetHandler.AddAction("attackrange_cursor_toggle", ToggleCursorRange, nil, "p")
+	widgetHandler.AddAction("attackrange_nextweaponconfig", WeaponDisplayCycleForward, nil, "p")
+
+	widgetHandler.AddAction("attackrange_prevweaponconfig", WeaponDisplayCycleBackward, nil, "p")
+
 
 	myAllyTeam = Spring.GetMyAllyTeamID()
 	local allyteamlist = Spring.GetAllyTeamList()
@@ -1237,16 +1244,24 @@ function Toggle(on)
 	--UpdateSelectedUnits()
 end
 
+function WeaponDisplayCycleForward(_, _, _, args)
+	CycleUnitDisplay(1)
+end
+
+function WeaponDisplayCycleBackward(_, _, _, args)
+	CycleUnitDisplay(-1)
+end
+
 function widget:KeyPress(key, mods, isRepeat)
 	if key == 304 then
 		shifted = true
 	end
-	if key == 46 and mods.alt then
+--[[ 	if key == 46 and mods.alt then
 		CycleUnitDisplay(1) -- cycle forward
 	end
 	if key == 44 and mods.alt then
 		CycleUnitDisplay(-1) -- cycle backward
-	end
+	end ]]
 end
 
 function widget:KeyRelease(key, mods, isRepeat)
