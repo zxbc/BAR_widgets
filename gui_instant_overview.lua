@@ -7,7 +7,6 @@ function widget:GetInfo()
         license = "GNU GPL, v2 or later",
         layer   = 0,
         enabled = true,
-        handler = true,
     }
 end
 
@@ -113,6 +112,7 @@ function widget:KeyPress(key, mods, isRepeat)
             Spring.SendCommands("minimap minimize 1")
             -- Disable advplayerslist widget
             --widgetHandler:DisableWidget('AdvPlayersList')
+            Spring.SendCommands("luaui disablewidget AdvPlayersList")
 
             if hide_all_ui then
                 Spring.SendCommands("HideInterface")
@@ -165,6 +165,7 @@ function widget:KeyRelease(key)
             Spring.SendCommands("minimap minimize 0")
             -- Re-enable advplayerslist widget
             --widgetHandler:EnableWidget('AdvPlayersList')
+            Spring.SendCommands("luaui enablewidget AdvPlayersList")
 
             if hide_all_ui then
                 Spring.SendCommands("HideInterface")
