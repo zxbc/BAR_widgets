@@ -124,6 +124,8 @@ function widget:KeyPress(key, mods, isRepeat)
             camState.px = Game.mapSizeX * 0.5
             camState.py = Spring.GetGroundHeight(Game.mapSizeX * 0.5, Game.mapSizeZ * 0.5)
             camState.pz = Game.mapSizeZ * 0.5
+            camState.rx = oldCamState.rx or 0
+            camState.ry = oldCamState.ry
 
             if mapRatio > aspectRatio then
                 camState.height = Game.mapSizeX / (2 * math.tan(math.rad(camState.fov / 2)))
@@ -177,8 +179,10 @@ function widget:DrawWorld()
         local px, py, pz = oldCamState.px, oldCamState.py, oldCamState.pz
 
         -- Setup circle parameters
-        local maxRadius = oldCamState.height/2
-        if maxRadius == nil then maxRadius = oldCamState.dist/2 or 1000 end -- maximum radius of the circle is now the camera's height
+        local maxRadius = oldCamState.height or 0
+        if maxRadius == nil then maxRadius = oldCamState.dist or 0 end -- maximum radius of the circle is now the camera's height
+        if maxRadius == 0 then maxRadius = 1000
+        else maxRadius = maxRadius / 2 end  -- if the camera's height is 0, set the maximum radius to 1000
         local shrinkTime = 0.5  -- how long it takes for the circle to shrink to the center, halved for a faster shrink
         local pauseTime = 1  -- pause time in seconds between each shrink
 
