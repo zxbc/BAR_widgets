@@ -1062,16 +1062,16 @@ function widget:Initialize()
 		unitToggles[i] = v
 	end
 
-	widgetHandler.AddAction("attackrange_cursor_toggle", ToggleCursorRange, nil, "p")
-	widgetHandler.AddAction("attackrange_nextweaponconfig", WeaponDisplayCycleForward, nil, "p")
+	widgetHandler:AddAction("attackrange_cursor_toggle", ToggleCursorRange, nil, "p")
+	widgetHandler:AddAction("attackrange_nextweaponconfig", WeaponDisplayCycleForward, nil, "p")
 
-	widgetHandler.AddAction("attackrange_prevweaponconfig", WeaponDisplayCycleBackward, nil, "p")
+	widgetHandler:AddAction("attackrange_prevweaponconfig", WeaponDisplayCycleBackward, nil, "p")
 
 
 	myAllyTeam = Spring.GetMyAllyTeamID()
 	local allyteamlist = Spring.GetAllyTeamList()
 	--Spring.Echo("# of allyteams = ", #allyteamlist)
-	numallyteams = #allyteamlist
+	--numallyteams = #allyteamlist
 
 	updateSelection = true
 	local _, _, _, shift = GetModKeyState()
