@@ -28,6 +28,8 @@ end
 -- NEW: LOTS OF PRETTY COLORS!
 -----------------------------------------------------------------------------------------------
 local custom_keybind_mode = false                  -- set to true for custom keybind
+local side_mouse_buttons_on = true  -- Set to false to disable side mouse button functionality
+
 
 local pingCommands = {                             -- the options in the ping wheel, displayed clockwise from 12 o'clock
     { name = "Attack",  color = { 1, 0.5, 0.3, 1 } }, -- color is optional, if no color is chosen it will be white
@@ -194,13 +196,19 @@ function widget:Initialize()
     textAlignRadiusRatio = style.textAlignRadiusRatio
     dividerColor = style.dividerColor
 
-    -- we disable the mouse build spacing widget here, sigh
-    widgetHandler:DisableWidget("Mouse Buildspacing")
+	if side_mouse_buttons_on then
+        -- we disable the mouse build spacing widget here, sigh
+        widgetHandler:DisableWidget("Mouse Buildspacing")
+	end
 end
 
 -- when widget exits, re-enable the mouse build spacing widget
 function widget:Shutdown()
     --:EnableWidget("Mouse Buildspacing")
+	if side_mouse_buttons_on then
+        -- Re-enable the mouse build spacing widget
+        widgetHandler:EnableWidget("Mouse Buildspacing")
+    end
 end
 
 -- Store the ping location in pingWorldLocation
@@ -285,9 +293,8 @@ function widget:KeyRelease(key, mods)
 end
 
 function widget:MousePress(mx, my, button)
-    if keyDown or button == 4 or button == 5 then
-        -- functionality of mouse build spacing is put in here, sigh
-        -- check if alt is pressed
+    if side_mouse_buttons_on and (keyDown or button == 4 or button == 5) then
+        -- Functionality for side mouse buttons is enabled
         local alt, ctrl, meta, shift = spGetModKeyState()
         if (button == 4 or button == 5) and alt then
             if button == 4 then
@@ -305,12 +312,21 @@ function widget:MousePress(mx, my, button)
         end
         TurnOn("mouse press")
         return true -- block all other mouse presses
+    elseif not side_mouse_buttons_on and keyDown then
+        -- Side mouse buttons are disabled, but keyDown functionality remains
+        if button == 1 then
+            pingWheel = pingCommands
+        elseif button == 3 then
+            pingWheel = pingMessages
+        end
+        TurnOn("mouse press")
+        return true -- block all other mouse presses
     else
-        -- set pingwheel to not display
-        --TurnOff("mouse press")
+        -- Handle cases where neither keyDown nor side mouse buttons are involved
         FadeOut()
     end
 end
+
 
 -- when mouse is pressed, issue the ping command
 function widget:MouseRelease(mx, my, button)
