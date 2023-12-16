@@ -23,6 +23,12 @@ local selectedUnits = {}
 local active = false
 local mouseClicked = false
 local curMods = {}   -- {alt, ctrl, meta, shift}
+local toggleBindings = {
+    "repeat",
+    "firestate",
+    "movestate",
+    "onoff",
+}
 
 -- shortcuts
 local echo = Spring.Echo
@@ -204,6 +210,10 @@ local function setActiveCmdFromKey(key)
         local cmdName = keyToBinding[keyString]
         --echo("keyString: "..keyString..", cmdName: "..tableToString(cmdName))
         if cmdName then
+            -- if cmdName is a toggle, skip it
+            for _, binding in pairs(toggleBindings) do
+                if cmdName == binding then return false end
+            end
             --echo("command set through keybind search: "..tableToString(cmdName))
             if type(cmdName) == "table" then -- we have multiple commands possible
                 local cmd
